@@ -1,0 +1,36 @@
+# دانلود صدای استاد پرهیزگار از EveryAyah مستقیم داخل ریپو (بدون دانلود روی سیستم خودتان)
+# اجرا: تب Actions ← «دانلود صدا» ← Run workflow
+name: دانلود صدا
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'surah = یک فایل برای هر سوره + timings.json (۳۸ فایل، پیشنهادی) | ayah = همان ۵۶۴ فایل آیه‌به‌آیه'
+        type: choice
+        default: surah
+        options: [surah, ayah]
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and build audio
+        run: |
+          if [ "${{ inputs.mode }}" = "ayah" ]; then
+            python3 tools/fetch-everyayah.py --dest audio
+          else
+            python3 tools/fetch-everyayah.py --build
+          fi
+      - name: Commit audio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audio
+          git diff --cached --quiet && { echo "تغییری نبود"; exit 0; }
+          git commit -m "افزودن صدای استاد پرهیزگار (${{ inputs.mode }})"
+          git push
