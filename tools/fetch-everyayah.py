@@ -9,7 +9,7 @@
 فایل‌هایی که قبلاً دانلود شده‌اند دوباره دانلود نمی‌شوند؛ اگر وسط کار قطع شد، دوباره اجرا کنید.
 پوشهٔ audio-src فقط مرحلهٔ میانی است؛ لازم نیست روی GitHub بگذارید (در .gitignore بیاید).
 """
-import argparse, pathlib, subprocess, sys, time, urllib.request, urllib.error
+import argparse, pathlib, shutil, subprocess, sys, time, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor
 
 AYAHS = {78: 40, 79: 46, 80: 42, 81: 29, 82: 19, 83: 36, 84: 25, 85: 22, 86: 17, 87: 19, 88: 26, 89: 30, 90: 20,
@@ -45,6 +45,8 @@ def main():
     ap.add_argument('--threads', type=int, default=4)
     ap.add_argument('--build', action='store_true', help='بعد از دانلود، فایل‌های هر سوره و timings.json را بسازد')
     a = ap.parse_args()
+    if a.build and not shutil.which('ffmpeg'):
+        sys.exit('ffmpeg نصب نیست. اول آن را نصب کنید (ffmpeg.org)، یا بدون --build اجرا کنید.')
     dest = pathlib.Path(a.dest); dest.mkdir(parents=True, exist_ok=True)
 
     jobs = [(f'{a.base}/{a.reciter}/{s:03d}{v:03d}.mp3', dest / f'{s:03d}{v:03d}.mp3') for s, n in AYAHS.items() for v in range(1, n + 1)]
