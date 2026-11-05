@@ -170,6 +170,11 @@ a{color:var(--leaf-d);font-weight:700}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (min-width:480px){.opts.words{grid-template-columns:repeat(4,1fr)}}
 
+/* تصویر آیه: صفحهٔ کاغذی هم‌رنگ پس‌زمینهٔ خود تصویر، تا لبهٔ تصویر دیده نشود */
+.ayah.has-img{background:var(--paper,#fff);border-radius:18px;padding:12px;box-shadow:0 0 0 1px var(--line);line-height:0}
+.ayah.has-img img{display:block;margin:0 auto;max-width:100%;height:auto}
+.ayah.has-img.blend img{mix-blend-mode:multiply}
+
 [hidden]{display:none!important}
 </style>
 </head>
@@ -212,7 +217,7 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 
 /* ============ ذخیره‌سازی ============ */
 const LS = 'baghe-hifz-v1';
-const fresh = () => ({ v: 1, active: null, set: { sound: true, rate: 1, repeats: 3, fs: 1, pin: '' }, profiles: {} });
+const fresh = () => ({ v: 1, active: null, set: { sound: true, rate: 1, repeats: 3, fs: 1, pin: '', img: true }, profiles: {} });
 function load() {
   try { const r = JSON.parse(localStorage.getItem(LS)); if (r && r.v === 1 && r.profiles) { r.set = Object.assign(fresh().set, r.set); return r; } } catch (e) { }
   return fresh();
@@ -317,6 +322,51 @@ function probe(url) {
   return new Promise(res => { const a = new Audio(); a.preload = 'metadata'; const f = v => { a.onloadedmetadata = a.onerror = null; res(v); }; a.onloadedmetadata = () => f(true); a.onerror = () => f(false); a.src = url; setTimeout(() => f(false), 8000); });
 }
 
+/* ============ تصویر آیه از EveryAyah (فقط وقتی آنلاین باشیم؛ در غیر این‌صورت همان متن با فونت می‌ماند) ============ */
+const imgUrl = (s, a) => `https://everyayah.com/data/images_png/${s}_${a}.png`;
+const ayImg = new Map();            // آدرس → {w,h,bg} یا null (شکست خورده)
+let corsOK = true;
+function sampleBg(img) {
+  try {
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0);
+    const pts = [[0, 0], [c.width - 1, 0], [0, c.height - 1], [c.width - 1, c.height - 1]].map(([px, py]) => x.getImageData(px, py, 1, 1).data);
+    if (pts.every(p => p[3] < 24)) return 'transparent';
+    const p = pts[0]; if (pts.some(q => Math.abs(q[0] - p[0]) + Math.abs(q[1] - p[1]) + Math.abs(q[2] - p[2]) > 36 || q[3] < 200)) return null;
+    return `rgb(${p[0]},${p[1]},${p[2]})`;
+  } catch (e) { return null; }       // تصویر از دامنهٔ دیگر بدون اجازهٔ CORS: رنگ قابل‌خواندن نیست
+}
+function tryLoad(url, cors) {
+  return new Promise(res => { const im = new Image(); if (cors) im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = url; });
+}
+async function loadAyImg(s, a) {
+  const url = imgUrl(s, a); if (ayImg.has(url)) return ayImg.get(url);
+  let im = corsOK ? await tryLoad(url, true) : null, bg = null;
+  if (im) bg = sampleBg(im);
+  else { if (corsOK) corsOK = false; im = await tryLoad(url, false); }
+  const info = im && im.naturalWidth > 20 ? { url, w: im.naturalWidth, h: im.naturalHeight, bg } : null;
+  ayImg.set(url, info); return info;
+}
+function putAyImg(box, info) {
+  if (!box.isConnected) return;
+  const maxW = box.clientWidth - 24;
+  if (info.h * Math.min(1, maxW / info.w) < 34) return;          // روی صفحهٔ کوچک ریز می‌شود؛ متن با فونت خواناتر است
+  const [s, a] = box.dataset.ayimg.split(':').map(Number), im = document.createElement('img');
+  im.src = info.url; im.alt = byId[s].v[a - 1][0]; im.lang = 'ar'; im.decoding = 'async';
+  if (S.set.fs > 1) im.style.width = Math.min(maxW, info.w * Math.min(1, maxW / info.w) * S.set.fs) + 'px';
+  box.classList.add('has-img'); box.classList.toggle('blend', !info.bg || info.bg === 'transparent');
+  box.style.setProperty('--paper', info.bg && info.bg !== 'transparent' ? info.bg : '#fff');
+  box.replaceChildren(im);
+}
+function hydrateAyImgs(root = document) {
+  if (!S.set.img || navigator.onLine === false) return;
+  root.querySelectorAll('[data-ayimg]:not(.has-img)').forEach(box => {
+    const [s, a] = box.dataset.ayimg.split(':').map(Number), url = imgUrl(s, a);
+    if (ayImg.has(url)) { const i = ayImg.get(url); if (i) putAyImg(box, i); return; }
+    loadAyImg(s, a).then(i => { if (i) putAyImg(box, i); });
+  });
+}
+
 /* ============ افکت‌ها ============ */
 let actx = null;
 function chime(kind) {
@@ -397,6 +447,7 @@ function draw() {
   } else { top.innerHTML = ''; nav.innerHTML = ''; nav.hidden = true; top.hidden = true; }
   $('#main').innerHTML = (VIEW[v] || VIEW.home)(arg);
   if (VIEW[v + '_after']) VIEW[v + '_after'](arg);
+  hydrateAyImgs($('#main'));
 }
 
 /* ============ انتخاب کودک ============ */
@@ -477,14 +528,14 @@ VIEW.s = ([id]) => {
 function sheet(s, a) {
   const v = byId[s].v[a - 1], st = learned(s, a);
   openModal(`<div class="stack"><div class="muted" style="text-align:center;font-weight:700">سورهٔ ${byId[s].fa} · آیهٔ ${fa(a)}</div>
-    <div class="ayah">${esc(v[0])}</div><div class="meaning">${esc(v[1])}</div>
+    <div class="ayah" data-ayimg="${s}:${a}">${esc(v[0])}</div><div class="meaning">${esc(v[1])}</div>
     <button class="btn water" data-act="hear" data-s="${s}" data-a="${a}">🔊 بشنو</button>
     ${st ? `<button class="btn" data-act="practiceOne" data-s="${s}" data-a="${a}">تمرین این آیه</button>` : `<button class="btn" data-act="learnFrom" data-s="${s}" data-a="${a}">یاد بگیر و بکار</button>`}
     <button class="btn ghost" data-act="close">بستن</button></div>`);
 }
 
 /* ============ پنجره‌ها ============ */
-function openModal(html) { closeModal(); const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" role="dialog" aria-modal="true">${html}</div>`; m.addEventListener('click', e => { if (e.target === m) closeModal(); }); $('#layer').appendChild(m); const f = $('button,input', m); f && f.focus(); }
+function openModal(html) { closeModal(); const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" role="dialog" aria-modal="true">${html}</div>`; m.addEventListener('click', e => { if (e.target === m) closeModal(); }); $('#layer').appendChild(m); hydrateAyImgs(m); const f = $('button,input', m); f && f.focus(); }
 function closeModal() { $('#layer').innerHTML = ''; }
 function confirmBox(msg, label, fn, danger) { openModal(`<div class="stack"><p style="font-weight:700;text-align:center">${msg}</p><button class="btn ${danger ? 'danger' : ''}" data-act="doConfirm">${label}</button><button class="btn ghost" data-act="close">بیخیال</button></div>`); window._cf = fn; }
 
@@ -581,7 +632,7 @@ VIEW.lesson = () => {
   h += stepBar + where(it);
   if (kind === 'listen') {
     const ready = st.done >= st.n;
-    h += `<div class="ayah big" id="ay">${wordSpans(w, new Set())}</div>
+    h += `<div class="ayah big" id="ay" data-ayimg="${it.s}:${it.a}">${wordSpans(w, new Set())}</div>
       <div class="dots" id="dots" aria-label="تعداد شنیدن">${[...Array(st.n)].map((_, i) => `<i class="${i < st.done ? 'done' : ''}"></i>`).join('')}</div>
       <p class="prompt">${st.noAudio ? 'فایل صوتی پیدا نشد. با صدای بلند بخوان' : 'خوب گوش بده و با خودت تکرار کن'}</p>
       ${st.meaning ? `<div class="meaning">${esc(byId[it.s].v[it.a - 1][1])}</div>` : ''}
@@ -593,18 +644,18 @@ VIEW.lesson = () => {
   }
   if (kind === 'blank') {
     const hid = new Set(st.hidden.slice(st.k)), hl = st.hidden[st.k];
-    h += `<p class="prompt">کدام کلمه جا افتاده است؟</p><div class="ayah big">${wordSpans(w, hid, hl)}</div>
+    h += `<p class="prompt">کدام کلمه جا افتاده است؟ جواب بده و بلند تکرار کن</p><div class="ayah big">${wordSpans(w, hid, hl)}</div>
       <div class="opts words" role="group">${st.opts.map((o, i) => `<button class="opt" data-act="bPick" data-i="${i}">${esc(o.t)}</button>`).join('')}</div>`;
   }
   if (kind === 'order') {
     const done = st.placed.length === st.u.length;
-    h += `<p class="prompt">${done ? 'آفرین! درست چیدی' : 'کلمه‌ها را به ترتیب بچین'}</p>
+    h += `<p class="prompt">${done ? 'آفرین! درست چیدی. حالا بلند تکرار کن' : 'کلمه‌ها را به ترتیب بچین و بلند تکرار کن'}</p>
       <div class="slots${done ? ' ok' : ''}" aria-live="polite">${st.placed.map(i => `<span class="chip placed">${esc(st.u[i])}</span>`).join('') || '<span class="muted" style="align-self:center">از راست شروع کن</span>'}</div>
       <div class="bank">${st.bank.filter(i => !st.placed.includes(i)).map(i => `<button class="chip" data-act="oPick" data-i="${i}">${esc(st.u[i])}</button>`).join('')}</div>
       ${done ? '<div style="margin-top:14px"><button class="btn gold" data-act="step">ادامه</button></div>' : ''}`;
   }
   if (kind === 'next') {
-    h += `<p class="prompt">بعد از این آیه، کدام آیه می‌آید؟</p><div class="ayah" style="padding-bottom:0">${esc(byId[it.s].v[it.a - 1][0])}</div>
+    h += `<p class="prompt">بعد از این آیه، کدام آیه می‌آید؟ جواب بده و بلند تکرار کن</p><div class="ayah" style="padding-bottom:0">${esc(byId[it.s].v[it.a - 1][0])}</div>
       <div class="row" style="margin:6px 0 10px"><button class="btn ghost small" data-act="hear" data-s="${it.s}" data-a="${it.a}">🔊 بشنو</button></div>
       <div class="opts">${st.opts.map((o, i) => `<button class="opt ${o.cls || ''}" data-act="nPick" data-i="${i}">${esc(o.t)}</button>`).join('')}</div>
       ${st.solved ? '<div style="margin-top:14px"><button class="btn gold" data-act="finishQ">ادامه</button></div>' : ''}`;
@@ -699,7 +750,8 @@ function parentsMain() {
       <div><label class="f">تعداد شنیدن هر آیه: <b id="rpv">${fa(S.set.repeats)}</b></label><input type="range" min="1" max="7" step="1" value="${S.set.repeats}" data-inp="repeats"></div>
       <div><label class="f">سرعت پخش: <b id="rtv">${fa(S.set.rate.toFixed(2))}</b></label><input type="range" min="0.7" max="1.2" step="0.05" value="${S.set.rate}" data-inp="rate"></div>
       <div><label class="f">اندازهٔ متن آیه</label><input type="range" min="0.9" max="1.4" step="0.05" value="${S.set.fs}" data-inp="fs"><div class="ayah" style="padding:0">قُلْ هُوَ ٱللَّهُ أَحَدٌ</div></div>
-      <div class="seg"><button data-act="snd" aria-pressed="${S.set.sound}">صدای افکت: ${S.set.sound ? 'روشن' : 'خاموش'}</button></div></div>
+      <div class="seg"><button data-act="snd" aria-pressed="${S.set.sound}">صدای افکت: ${S.set.sound ? 'روشن' : 'خاموش'}</button><button data-act="img" aria-pressed="${S.set.img}">تصویر آیه (آنلاین): ${S.set.img ? 'روشن' : 'خاموش'}</button></div>
+      <p class="muted" style="margin:0;font-size:.9rem">وقتی اینترنت هست، در گوش‌دادن و برگهٔ آیه، تصویر آیه از EveryAyah نمایش داده می‌شود. بدون اینترنت یا اگر بارگیری نشد، همان متن با فونت می‌آید. در مرحله‌های جای خالی، چیدن و از حفظ‌خواندن همیشه متن است.</p></div>
     <div class="card stack"><b>فایل‌های صوتی (قاری)</b>
       <p class="muted" style="margin:0">فایل‌ها را داخل پوشهٔ <b dir="ltr">audio</b> بگذارید: یا برای هر سوره یک فایل مثل <b dir="ltr">078.mp3</b> همراه <b dir="ltr">timings.json</b> (با ابزار <b dir="ltr">tools/make-audio.py</b> ساخته می‌شود؛ پیشنهادی)، یا برای هر آیه <b dir="ltr">078001.mp3</b>. راهنمای کامل در فایل README است.</p>
       <button class="btn ghost" data-act="audit" id="auBtn">بررسی فایل‌های صوتی</button>
@@ -712,7 +764,7 @@ function parentsMain() {
       <div class="row"><button class="btn ghost small" data-act="setPin">${S.set.pin ? 'تغییر رمز' : 'گذاشتن رمز'}</button>${S.set.pin ? '<button class="btn ghost small" data-act="clearPin">برداشتن رمز</button>' : ''}</div></div>
     <div class="card"><b>دربارهٔ برنامه</b>
       <p class="muted" style="font-size:.95rem">متن آیات: ${esc(D.sources.text)}</p><p class="muted" style="font-size:.95rem">معنی آیات: ${esc(D.sources.meaning)}</p>
-      <p class="muted" style="font-size:.95rem">فونت متن قرآن: شهرزاد نو (SIL OFL). متن و ترجمه را یک بار با معلم یا مصحف چاپی تطبیق دهید.</p>
+      <p class="muted" style="font-size:.95rem">تصویر آیه (در حالت آنلاین): everyayah.com. فونت متن قرآن: شهرزاد نو (SIL OFL). متن و ترجمه را یک بار با معلم یا مصحف چاپی تطبیق دهید.</p>
       <p style="font-size:.95rem">ساخته‌شده توسط حسین شیبه · <a href="https://sheibah.ir" target="_blank" rel="noopener">sheibah.ir</a></p>
       ${deferredPrompt ? '<button class="btn ghost small" data-act="install">نصب برنامه روی دستگاه</button>' : '<p class="muted" style="font-size:.9rem">برای نصب: در Chrome گزینهٔ «نصب برنامه»، در Safari دکمهٔ «اشتراک‌گذاری» و سپس «افزودن به صفحهٔ اصلی».</p>'}</div>
     <button class="btn ghost" data-act="lockNow">قفل‌کردن این بخش</button></div>`;
@@ -859,6 +911,7 @@ const A = {
   resetKid: el => { const id = el.dataset.id; confirmBox('همهٔ پیشرفت این کودک پاک می‌شود. مطمئنی؟', 'پاک کن', () => { const p = S.profiles[id]; p.ay = {}; p.days = {}; p.stars = 0; p.streak = { cur: 0, best: 0, last: '' }; p.cur = PATH[0]; save(); draw(); }, true); },
   delKid: el => { const id = el.dataset.id; confirmBox('این کودک و پیشرفتش حذف می‌شود. مطمئنی؟', 'حذف کن', () => { delete S.profiles[id]; if (S.active === id) S.active = Object.keys(S.profiles)[0] || null; save(); draw(); }, true); },
   snd: () => { S.set.sound = !S.set.sound; save(); draw(); },
+  img: () => { S.set.img = !S.set.img; save(); draw(); },
   audit: () => auditAudio(),
   cacheAudio: () => cacheAudio(),
   export: () => exportBackup(),
@@ -887,7 +940,7 @@ document.addEventListener('change', e => {
       confirmBox('پیشرفت فعلی این دستگاه با فایل پشتیبان جایگزین می‌شود. ادامه می‌دهی؟', 'جایگزین کن', () => {
         const ns = fresh(); ns.set = Object.assign(ns.set, j.set || {});
         ns.set.rate = Math.min(1.2, Math.max(.7, +ns.set.rate || 1)); ns.set.repeats = Math.min(7, Math.max(1, +ns.set.repeats || 3)); ns.set.fs = Math.min(1.4, Math.max(.9, +ns.set.fs || 1));
-        ns.set.pin = /^\d{4}$/.test(ns.set.pin) ? ns.set.pin : ''; ns.set.sound = ns.set.sound !== false;
+        ns.set.pin = /^\d{4}$/.test(ns.set.pin) ? ns.set.pin : ''; ns.set.sound = ns.set.sound !== false; ns.set.img = ns.set.img !== false;
         Object.values(j.profiles).forEach(p => { const q = cleanProfile(p || {}); ns.profiles[q.id] = q; });
         ns.active = ns.profiles[j.active] ? j.active : Object.keys(ns.profiles)[0] || null;
         S = ns; save(); applyFs(); toast('بازیابی شد'); draw();
