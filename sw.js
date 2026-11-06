@@ -1,8 +1,9 @@
 /* سرویس‌ورکر باغ حفظ — کار آفلاین
    برای عوض‌کردن نسخهٔ برنامه، عدد VERSION را بالا ببرید. */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = 'hifz-shell-' + VERSION;
-const AUDIO = 'hifz-audio-v1';           // همان نامی که برنامه برای ذخیرهٔ صدا استفاده می‌کند
+const AUDIO = 'hifz-audio-v1';           // نام‌هایی که برنامه برای ذخیرهٔ صدا و تصویر آیه‌ها استفاده می‌کند
+const IMG = 'hifz-img-v1';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'fonts/scheherazade-new-regular.woff2'];
 
 self.addEventListener('install', e => {
@@ -25,9 +26,16 @@ async function rangeFrom(req, res) {
 
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (req.method !== 'GET') return;
 
-  if (/\/audio\//.test(url.pathname)) {
+  /* تصویر آیهٔ EveryAyah: اگر ذخیره شده بود از حافظه، وگرنه از اینترنت */
+  if (url.hostname === 'everyayah.com' && /\/images_png\//.test(url.pathname)) {
+    e.respondWith(caches.match(req.url).then(r => r || fetch(req)));
+    return;
+  }
+  if (url.origin !== location.origin) return;
+
+  if (/\/(audio|images)\//.test(url.pathname)) {
     e.respondWith((async () => {
       const hit = await caches.match(url.pathname.endsWith('.json') ? req : new Request(req.url), { ignoreSearch: true });
       if (hit) return req.headers.has('range') ? rangeFrom(req, hit) : hit;
@@ -36,8 +44,12 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  if (req.mode === 'navigate') {
-    e.respondWith(caches.match('index.html').then(r => r || fetch(req)));
+  if (req.mode === 'navigate') {            // نسخهٔ ذخیره‌شده را فوری می‌دهد و در پس‌زمینه تازه می‌کند (دفعهٔ بعد نسخهٔ نو می‌آید)
+    e.respondWith(caches.match('index.html').then(r => {
+      const net = fetch(req).then(res => { if (res.ok) caches.open(SHELL).then(c => c.put('index.html', res.clone())); return res; }).catch(() => null);
+      if (r) { e.waitUntil(net); return r; }
+      return net.then(res => res || Response.error());
+    }));
     return;
   }
   e.respondWith(caches.match(req).then(r => r || fetch(req).then(res => {

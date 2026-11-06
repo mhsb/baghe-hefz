@@ -1,0 +1,44 @@
+# ساخت ریلیز GitHub: زیپ برنامه + بستهٔ کامل آفلاین (برنامه + صدا + تصویر آیه‌ها)
+# اجرا: تب Actions ← «انتشار نسخه» ← Run workflow ← نام نسخه (مثلاً v1.0.0)
+name: انتشار نسخه
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'نام نسخه، مثلاً v1.0.0'
+        required: true
+        default: v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Get audio and images (skipped if already in the repo)
+        run: |
+          [ -f audio/timings.json ] || python3 tools/fetch-everyayah.py --build
+          [ -f images/114_5.png ] || python3 tools/fetch-everyayah.py --images
+      - name: Package
+        run: |
+          mkdir dist
+          APP="index.html sw.js manifest.json icon-192.png icon-512.png fonts README.md"
+          zip -r dist/baghe-hifz-app.zip $APP
+          zip -r dist/baghe-hifz-full-offline.zip $APP audio images
+          zip -r dist/audio-only.zip audio
+          zip -r dist/images-only.zip images
+          ls -la dist
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ inputs.tag }}" dist/*.zip \
+            --title "باغ حفظ ${{ inputs.tag }}" \
+            --notes "baghe-hifz-app.zip: خود برنامه (کوچک). baghe-hifz-full-offline.zip: برنامه + صدا + تصویر آیه‌ها برای کار کاملاً آفلاین. audio-only.zip و images-only.zip: فقط صدا یا فقط تصویرها."

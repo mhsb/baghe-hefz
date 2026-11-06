@@ -241,6 +241,13 @@ a{color:var(--leaf-d);font-weight:700}
 .bed.lg .soil{padding-inline:8px}
 .farm{padding-top:34px}
 
+/* حالت آزمایشی */
+#demobar{position:fixed;top:0;inset-inline:0;z-index:45;display:flex;gap:8px;align-items:center;padding:5px 10px;background:#fff3c4;color:#4a3200;border-bottom:2px solid var(--gold);font-weight:800}
+#demobar span{flex:1;text-align:center;font-size:.9rem}
+#demobar button{background:#fff;border-radius:99px;padding:1px 12px;font-weight:800;font-size:.88rem;box-shadow:0 0 0 2px var(--gold)}
+body.demo #app{padding-top:38px}
+select{font:inherit;width:100%;padding:10px 12px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink)}
+
 [hidden]{display:none!important}
 </style>
 </head>
@@ -274,8 +281,9 @@ const fa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
 const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pick = a => a[Math.random() * a.length | 0];
+let demo = null, dayShift = 0;                      // حالت آزمایشی والدین (فقط در حافظه؛ هرگز ذخیره نمی‌شود)
 const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-const today = () => iso(new Date());
+const today = () => iso(new Date(Date.now() + dayShift * 864e5));
 const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };
 const daysBetween = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -291,7 +299,7 @@ function load() {
 let S = load();
 let storageOK = true;
 function save() { try { localStorage.setItem(LS, JSON.stringify(S)); storageOK = true; } catch (e) { storageOK = false; } }
-const P = () => S.profiles[S.active];
+const P = () => demo ? demo.p : S.profiles[S.active];
 function newProfile(name, av) {
   const id = uid();
   S.profiles[id] = { id, name, av, ay: {}, days: {}, stars: 0, streak: { cur: 0, best: 0, last: '' }, goal: { newPerDay: 2, revMax: 10 }, cur: PATH[0], created: today() };
@@ -390,8 +398,9 @@ function probe(url) {
 
 /* ============ تصویر آیه از EveryAyah (فقط وقتی آنلاین باشیم؛ در غیر این‌صورت همان متن با فونت می‌ماند) ============ */
 const imgUrl = (s, a) => `https://everyayah.com/data/images_png/${s}_${a}.png`;
+const localImg = (s, a) => `images/${s}_${a}.png`;       // اگر پوشهٔ images کنار برنامه باشد، اول از آن می‌خواند
 const ayImg = new Map();            // آدرس → {w,h,bg} یا null (شکست خورده)
-let corsOK = true;
+let corsOK = true, localOK = true;
 function sampleBg(img) {
   try {
     const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
@@ -406,12 +415,15 @@ function tryLoad(url, cors) {
   return new Promise(res => { const im = new Image(); if (cors) im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = url; });
 }
 async function loadAyImg(s, a) {
-  const url = imgUrl(s, a); if (ayImg.has(url)) return ayImg.get(url);
-  let im = corsOK ? await tryLoad(url, true) : null, bg = null;
-  if (im) bg = sampleBg(im);
-  else { if (corsOK) corsOK = false; im = await tryLoad(url, false); }
+  const k = s + ':' + a; if (ayImg.has(k)) return ayImg.get(k);
+  let im = null, bg = null, url = '';
+  if (localOK) { url = localImg(s, a); im = await tryLoad(url, false); if (im) bg = sampleBg(im); else localOK = false; }
+  if (!im) {
+    url = imgUrl(s, a); im = corsOK ? await tryLoad(url, true) : null;
+    if (im) bg = sampleBg(im); else { corsOK = false; im = await tryLoad(url, false); bg = null; }
+  }
   const info = im && im.naturalWidth > 20 ? { url, w: im.naturalWidth, h: im.naturalHeight, bg } : null;
-  ayImg.set(url, info); return info;
+  ayImg.set(k, info); return info;
 }
 function putAyImg(box, info) {
   if (!box.isConnected) return;
@@ -425,13 +437,14 @@ function putAyImg(box, info) {
   box.replaceChildren(im);
 }
 function hydrateAyImgs(root = document) {
-  if (!S.set.img || navigator.onLine === false) return;
+  if (!S.set.img) return;
   root.querySelectorAll('[data-ayimg]:not(.has-img)').forEach(box => {
-    const [s, a] = box.dataset.ayimg.split(':').map(Number), url = imgUrl(s, a);
-    if (ayImg.has(url)) { const i = ayImg.get(url); if (i) putAyImg(box, i); return; }
+    const [s, a] = box.dataset.ayimg.split(':').map(Number), k = s + ':' + a;
+    if (ayImg.has(k)) { const i = ayImg.get(k); if (i) putAyImg(box, i); return; }
     loadAyImg(s, a).then(i => { if (i) putAyImg(box, i); });
   });
 }
+window.addEventListener('online', () => { corsOK = true; for (const [k, v] of [...ayImg]) if (!v) ayImg.delete(k); });
 
 /* ============ افکت‌ها ============ */
 let actx = null;
@@ -507,7 +520,7 @@ function draw() {
     const p = P();
     top.innerHTML = `<button class="who" data-act="go" data-to="who" aria-label="تغییر کودک"><span class="av">${p.av}</span>${esc(p.name)}</button>
       <div class="stats"><span class="pill" title="ستاره‌ها">${IC.star}${fa(p.stars)}</span><span class="pill" title="روزهای پشت‌سرهم">${IC.sun}${fa(streakNow())}</span></div>`;
-    const cur = v === 'home' ? 'home' : (v === 'garden' || v === 's') ? 'garden' : v === 'parents' ? 'parents' : '';
+    const cur = v === 'home' ? 'home' : (v === 'garden' || v === 's') ? 'garden' : (v === 'parents' || v === 'downloads') ? 'parents' : '';
     const tab = (id, ic, t) => `<button data-act="go" data-to="${id === 'home' ? '' : id}" ${cur === id ? 'aria-current="page"' : ''}>${IC[ic]}${t}</button>`;
     nav.innerHTML = `<div class="in">${tab('home', 'home', 'امروز')}${tab('garden', 'garden', 'باغ من')}${tab('parents', 'lock', 'والدین')}</div>`;
     nav.hidden = false; top.hidden = false;
@@ -515,6 +528,7 @@ function draw() {
   $('#main').innerHTML = (VIEW[v] || VIEW.home)(arg);
   if (VIEW[v + '_after']) VIEW[v + '_after'](arg);
   hydrateAyImgs($('#main'));
+  drawDemoBar();
 }
 
 /* ============ انتخاب کودک ============ */
@@ -855,9 +869,6 @@ function parentsMain() {
   const profs = Object.values(S.profiles);
   const kids = profs.map(p => { const l = Object.keys(p.ay).length, bl = Object.values(p.ay).filter(x => x.b >= 5).length;
     return `<button class="li" data-act="pEdit" data-id="${p.id}"><span class="av">${p.av}</span><span class="grow"><b>${esc(p.name)}</b>${p.id === S.active ? ' <span class="tag">فعال</span>' : ''}<div class="meta muted" style="font-size:.9rem">${fa(l)} از ${fa(TOTAL)} آیه · ${fa(bl)} گل شکفته · ${fa(p.stars)} ستاره</div></span><span class="muted">‹</span></button>`; }).join('');
-  const rp = audioReport;
-  const ayN = rp ? Object.values(rp.ay).reduce((n, x) => n + x.length, 0) : 0;
-  const miss = rp ? SUR.filter(s => (rp.ay[s.id] || []).length < s.v.length && !rp.su.includes(s.id)).map(s => s.fa) : [];
   return `<div class="stack"><h1>بخش والدین</h1>
     <div class="card"><b>کودکان</b><div class="list" style="margin-top:6px">${kids}</div><div class="stack" style="margin-top:10px"><button class="btn ghost small" data-act="addKid">+ کودک تازه</button></div></div>
     <div class="card stack"><b>صدا و نمایش</b>
@@ -866,12 +877,12 @@ function parentsMain() {
       <div><label class="f">اندازهٔ متن آیه</label><input type="range" min="0.9" max="1.4" step="0.05" value="${S.set.fs}" data-inp="fs"><div class="ayah" style="padding:0">قُلْ هُوَ ٱللَّهُ أَحَدٌ</div></div>
       <div class="seg"><button data-act="snd" aria-pressed="${S.set.sound}">صدای افکت: ${S.set.sound ? 'روشن' : 'خاموش'}</button><button data-act="img" aria-pressed="${S.set.img}">تصویر آیه (آنلاین): ${S.set.img ? 'روشن' : 'خاموش'}</button></div>
       <p class="muted" style="margin:0;font-size:.9rem">وقتی اینترنت هست، در گوش‌دادن و برگهٔ آیه، تصویر آیه از EveryAyah نمایش داده می‌شود. بدون اینترنت یا اگر بارگیری نشد، همان متن با فونت می‌آید. در مرحله‌های جای خالی، چیدن و از حفظ‌خواندن همیشه متن است.</p></div>
-    <div class="card stack"><b>فایل‌های صوتی (قاری)</b>
-      <p class="muted" style="margin:0">فایل‌ها را داخل پوشهٔ <b dir="ltr">audio</b> بگذارید: یا برای هر سوره یک فایل مثل <b dir="ltr">078.mp3</b> همراه <b dir="ltr">timings.json</b> (با ابزار <b dir="ltr">tools/make-audio.py</b> ساخته می‌شود؛ پیشنهادی)، یا برای هر آیه <b dir="ltr">078001.mp3</b>. راهنمای کامل در فایل README است.</p>
-      <button class="btn ghost" data-act="audit" id="auBtn">بررسی فایل‌های صوتی</button>
-      ${rp ? `<div class="meaning">${fa(ayN)} از ${fa(TOTAL)} فایل آیه به آیه پیدا شد${rp.su.length ? ` و ${fa(rp.su.length)} فایل کل سوره` : ''}.${miss.length && miss.length < 37 ? `<br>سوره‌های ناقص: ${miss.map(esc).join('، ')}` : ''}${ayN + rp.su.length === 0 ? '<br>هیچ فایلی پیدا نشد. برنامه بدون صدا هم کار می‌کند.' : ''}</div>
-      ${ayN || rp.su.length ? '<button class="btn water" data-act="cacheAudio" id="caBtn">ذخیرهٔ صدا برای کار بدون اینترنت</button>' : ''}` : ''}
-      <div id="auMsg" class="muted" role="status"></div></div>
+    <div class="card stack"><b>دانلودها (برای کار بدون اینترنت)</b>
+      <p class="muted" style="margin:0">صدای قاری و تصویر آیه‌ها را روی همین دستگاه ذخیره یا پاک کنید.</p>
+      <button class="btn water" data-act="go" data-to="downloads">مدیریت دانلودها</button></div>
+    <div class="card stack"><b>🧪 حالت آزمایشی</b>
+      <p class="muted" style="margin:0">همهٔ مرحله‌ها و حالت‌ها را بدون دست‌زدن به پیشرفت کودکان امتحان کنید: هر نوع درس، هر مرحلهٔ رشد گیاه و گذشتن چند روز. چیزی ذخیره نمی‌شود و با خروج یا قفل‌کردن این بخش، همه‌چیز به حالت عادی برمی‌گردد.</p>
+      ${demo ? '<button class="btn" data-act="demoTools">ابزارهای آزمایش</button><button class="btn ghost" data-act="demoExit">خروج از حالت آزمایشی</button>' : '<button class="btn gold" data-act="demoStart">شروع حالت آزمایشی</button>'}</div>
     <div class="card stack"><b>پشتیبان‌گیری</b><p class="muted" style="margin:0">پیشرفت همهٔ کودکان فقط روی همین دستگاه ذخیره می‌شود. یک نسخهٔ پشتیبان نگه دارید.</p>
       <div class="row"><button class="btn ghost small" data-act="export">ذخیرهٔ فایل</button><button class="btn ghost small" data-act="import">بازیابی از فایل</button></div><input type="file" id="impf" accept=".json,application/json" hidden></div>
     <div class="card stack"><b>رمز ورود به این بخش</b><p class="muted" style="margin:0">${S.set.pin ? 'رمز فعال است.' : 'اکنون با یک مسئلهٔ ریاضی وارد می‌شوید. می‌توانید رمز چهار رقمی بگذارید.'}</p>
@@ -896,20 +907,144 @@ function editKid(id) {
     <button class="btn ghost small" data-act="close" style="margin:auto">بستن</button></div>`);
 }
 async function runPool(jobs, n, fn, onTick) { let i = 0, done = 0; await Promise.all([...Array(n)].map(async () => { while (i < jobs.length) { const j = jobs[i++]; await fn(j); onTick && onTick(++done, jobs.length); } })); }
-async function auditAudio() {
-  const jobs = []; SUR.forEach(s => { for (let a = 1; a <= s.v.length; a++) jobs.push({ s: s.id, a }); jobs.push({ s: s.id, a: 0 }); });
-  const rep = { ay: {}, su: [] }, msg = $('#auMsg'), b = $('#auBtn'); b && (b.disabled = true);
-  await runPool(jobs, 10, async j => { const ok = await probe(j.a ? ayUrl(j.s, j.a) : suUrl(j.s)); if (ok) { if (j.a) (rep.ay[j.s] = rep.ay[j.s] || []).push(j.a); else rep.su.push(j.s); } }, (d, t) => { if (msg && d % 25 === 0) msg.textContent = `در حال بررسی… ${fa(Math.round(d / t * 100))}٪`; });
-  audioReport = rep; audioMode = {}; draw();
-}
-async function cacheAudio() {
-  if (!('caches' in window)) { toast('ذخیرهٔ آفلاین فقط وقتی برنامه از آدرس اینترنتی باز شود کار می‌کند'); return; }
-  const urls = []; Object.entries(audioReport.ay).forEach(([s, l]) => l.forEach(a => urls.push(ayUrl(+s, a)))); audioReport.su.forEach(s => urls.push(suUrl(s)));
-  const cache = await caches.open('hifz-audio-v1'), msg = $('#auMsg'), b = $('#caBtn'); b && (b.disabled = true); let fail = 0;
-  await runPool(urls, 4, async u => { try { if (!(await cache.match(u))) { const r = await fetch(u); if (r.ok) await cache.put(u, r); else fail++; } } catch (e) { fail++; } }, (d, t) => { if (msg) msg.textContent = `در حال ذخیره… ${fa(d)} از ${fa(t)}`; });
-  if (msg) msg.textContent = fail ? `${fa(fail)} فایل ذخیره نشد. دوباره امتحان کنید.` : 'همهٔ صداها ذخیره شد و بدون اینترنت هم کار می‌کند.'; b && (b.disabled = false);
-}
 function exportBackup() { const blob = new Blob([JSON.stringify(S)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `baghe-hifz-${today()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+
+/* ============ حالت آزمایشی والدین ============
+   یک پروفایل موقت فقط در حافظه است؛ هیچ‌چیز از آن در S.profiles یا localStorage نمی‌نشیند.
+   با «خروج»، قفل‌کردن بخش والدین یا بازکردن دوبارهٔ صفحه، همه‌چیز پاک می‌شود. */
+function startDemo() {
+  demo = { p: { id: 'demo', name: 'آزمایشی', av: '🧪', ay: {}, days: {}, stars: 0, streak: { cur: 0, best: 0, last: '' }, goal: { newPerDay: 3, revMax: 20 }, cur: PATH[0], created: today() } };
+  dayShift = 0; sess = null; stopAudio(); go('');
+  setTimeout(demoTools, 60);
+}
+function endDemo(silent) {
+  if (!demo) return;
+  demo = null; dayShift = 0; sess = null; stopAudio(); closeModal(); drawDemoBar();
+  if (!silent) { go('parents'); toast('حالت آزمایشی تمام شد. همه‌چیز به حالت عادی برگشت'); }
+}
+function drawDemoBar() {
+  let b = $('#demobar');
+  if (!demo) { if (b) b.remove(); document.body.classList.remove('demo'); return; }
+  if (!b) { b = document.createElement('div'); b.id = 'demobar'; document.body.appendChild(b); }
+  document.body.classList.add('demo');
+  b.innerHTML = `<span>🧪 حالت آزمایشی${dayShift ? ` · ${fa(dayShift)} روز جلوتر` : ''}</span><button data-act="demoTools">ابزارها</button><button data-act="demoExit">خروج</button>`;
+}
+const GROW = ['', 'جوانه', 'برگ‌دار', 'بلندتر', 'غنچه', 'شکفته'];
+const dayLabel = () => `⏭ یک روز جلو (اکنون: ${dayShift ? fa(dayShift) + ' روز جلوتر' : 'امروز'})`;
+function fillAyahs() {
+  const s = +$('#dsur').value, n = byId[s].v.length, keep = +$('#day').value || 1;
+  $('#day').innerHTML = [...Array(n).keys()].map(i => `<option value="${i + 1}"${i + 1 === Math.min(keep, n) ? ' selected' : ''}>آیهٔ ${fa(i + 1)}</option>`).join('');
+}
+function demoTools() {
+  if (!demo) return;
+  const sOpts = SUR.map(s => `<option value="${s.id}"${s.id === 114 ? ' selected' : ''}>${fa(s.id)} · ${s.fa}</option>`).join('');
+  const bOpts = [1, 2, 3, 4, 5].map(i => `<option value="${i}">${fa(i)} · ${GROW[i]}</option>`).join('');
+  openModal(`<div class="stack"><b style="font-size:1.2rem">🧪 ابزار آزمایش</b>
+    <p class="muted" style="margin:0;font-size:.92rem">هر کاری اینجا بکنید فقط در حالت آزمایشی است و حساب کودکان دست نمی‌خورد.</p>
+    <div class="card stack"><b>یک درس مشخص</b>
+      <div><label class="f" for="dsur">سوره</label><select id="dsur">${sOpts}</select></div>
+      <div><label class="f" for="day">آیه</label><select id="day"></select></div>
+      <div><label class="f" for="dkind">نوع درس</label><select id="dkind"><option value="new">آیهٔ جدید (همهٔ مرحله‌ها)</option><option value="blank">مرور: جای خالی</option><option value="order">مرور: چیدن کلمه‌ها</option><option value="next">مرور: آیهٔ بعدی</option><option value="recite">مرور: از حفظ‌خواندن</option></select></div>
+      <div><label class="f" for="dbox">مرحلهٔ رشد گیاه (برای مرور)</label><select id="dbox">${bOpts}</select></div>
+      <button class="btn" data-act="demoRun">شروع این درس</button></div>
+    <div class="card stack"><b>باغ و زمان</b>
+      <div><label class="f" for="dgrow">همهٔ آیه‌ها را در این مرحله بکار</label><select id="dgrow">${bOpts}</select></div>
+      <button class="btn ghost small" data-act="demoPlant">کاشتن همه</button>
+      <button class="btn ghost small" data-act="demoThirst">همه تشنه شوند 💧</button>
+      <button class="btn ghost small" data-act="demoDay">${dayLabel()}</button>
+      <button class="btn ghost small" data-act="demoParty">🎉 دیدن جشن</button>
+      <button class="btn ghost small" data-act="demoClear">پاک‌کردن باغ آزمایشی</button></div>
+    <button class="btn ghost" data-act="close">بستن</button></div>`);
+  fillAyahs();
+}
+
+/* ============ مدیریت دانلودها ============ */
+const CACHE_AU = 'hifz-audio-v1', CACHE_IM = 'hifz-img-v1';
+const dl = { busy: false, cancel: false };
+const mb = n => fa((n / 1048576).toFixed(n > 10 * 1048576 ? 0 : 1));
+async function cacheCount(name) {
+  try { if (!('caches' in window)) return -1; if (!(await caches.has(name))) return 0; return (await (await caches.open(name)).keys()).length; } catch (e) { return -1; }
+}
+const head = async u => { try { const r = await fetch(u, { method: 'HEAD', cache: 'no-store' }); return r.ok; } catch (e) { return false; } };
+async function findAudio() {                       // فایل‌های صوتی‌ای که روی همین سایت هست
+  try {
+    const r = await fetch('audio/timings.json', { cache: 'no-store' });
+    if (r.ok) { const t = await r.json(), urls = ['audio/timings.json']; for (const s of Object.keys(t)) if (byId[s]) urls.push(suUrl(+s)); return urls; }
+  } catch (e) { }
+  const jobs = [], urls = []; SUR.forEach(s => { for (let a = 1; a <= s.v.length; a++) jobs.push(ayUrl(s.id, a)); });
+  await runPool(jobs, 12, async u => { if (await head(u)) urls.push(u); });
+  return urls;
+}
+async function dlScan() {
+  const el = $('#dlStat'); if (!el) return;
+  const [ca, ci] = await Promise.all([cacheCount(CACHE_AU), cacheCount(CACHE_IM)]);
+  if (ca < 0) { el.textContent = 'ذخیرهٔ آفلاین فقط وقتی کار می‌کند که برنامه از یک آدرس اینترنتی (https) باز شده باشد.'; return; }
+  let use = ''; try { const e = await navigator.storage.estimate(); use = `<br>فضای مصرفی برنامه: ${mb(e.usage)} مگابایت`; } catch (e) { }
+  el.innerHTML = `🔊 صدا: ${fa(ca)} فایل ذخیره شده<br>🖼️ تصویر آیه‌ها: ${fa(ci)} از ${fa(TOTAL)} ذخیره شده${use}`;
+}
+function dlUI(busy, msg, pct) {
+  const b = $('#dlBar'), m = $('#dlMsg'), c = $('#dlCancel');
+  if (m && msg != null) m.textContent = msg; if (b && pct != null) b.style.width = pct + '%';
+  document.querySelectorAll('[data-dl]').forEach(x => x.disabled = busy); if (c) c.hidden = !busy;
+}
+async function dlAudio() {
+  dlUI(true, 'در حال یافتن فایل‌های صوتی…', 0);
+  const urls = await findAudio();
+  if (!urls.length) { dlUI(true, 'فایل صوتی روی این سایت پیدا نشد. آن‌ها را در پوشهٔ audio بگذارید (راهنما در README).', 0); return 0; }
+  const cache = await caches.open(CACHE_AU), todo = []; for (const u of urls) if (!(await cache.match(u))) todo.push(u);
+  let fail = 0;
+  await runPool(todo, 4, async u => { if (dl.cancel) return; try { const r = await fetch(u); if (r.ok) await cache.put(u, r); else fail++; } catch (e) { fail++; } },
+    (d, t) => dlUI(true, `صدا: ${fa(d)} از ${fa(t)}`, Math.round(d / t * 100)));
+  return fail;
+}
+async function dlImages() {
+  const local = await head(localImg(114, 1)), cache = await caches.open(CACHE_IM), todo = [];
+  for (const s of SUR) for (let a = 1; a <= s.v.length; a++) { const u = local ? localImg(s.id, a) : imgUrl(s.id, a); if (!(await cache.match(u))) todo.push(u); }
+  let fail = 0;
+  await runPool(todo, 6, async u => {
+    if (dl.cancel) return;
+    try {
+      let r; if (local) r = await fetch(u); else { try { r = await fetch(u, { mode: 'cors' }); } catch (e) { r = await fetch(u, { mode: 'no-cors' }); } }
+      if (r.type !== 'opaque' && !r.ok) throw 0;
+      await cache.put(u, r);
+    } catch (e) { fail++; }
+  }, (d, t) => dlUI(true, `تصویر آیه‌ها: ${fa(d)} از ${fa(t)}`, Math.round(d / t * 100)));
+  return fail;
+}
+async function dlRun(what) {
+  if (dl.busy) return;
+  if (!('caches' in window)) { toast('ذخیرهٔ آفلاین فقط وقتی کار می‌کند که برنامه از آدرس اینترنتی (https) باز شود'); return; }
+  dl.busy = true; dl.cancel = false; let fail = 0;
+  try {
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }
+    if (what !== 'img') fail += (await dlAudio()) || 0;
+    if (what !== 'audio' && !dl.cancel) fail += await dlImages();
+    dlUI(false, dl.cancel ? 'متوقف شد. هر چه دانلود شده بود نگه داشته شد.' : fail ? `${fa(fail)} فایل دانلود نشد. اینترنت را بررسی و دوباره امتحان کنید.` : 'تمام شد. این فایل‌ها بدون اینترنت هم کار می‌کنند.', 100);
+  } catch (e) { dlUI(false, 'در دانلود خطا پیش آمد. اینترنت را بررسی کنید.'); }
+  dl.busy = false; dlUI(false); dlScan();
+}
+async function dlDelete(what) {
+  try { if (what !== 'img') await caches.delete(CACHE_AU); if (what !== 'audio') await caches.delete(CACHE_IM); } catch (e) { }
+  audioMode = {}; toast('پاک شد'); dlScan();
+}
+VIEW.downloads = () => {
+  if (Date.now() >= unlockUntil) return VIEW.parents();
+  return `<div class="stack"><div class="row" style="gap:8px"><button class="btn ghost small" style="flex:none" data-act="go" data-to="parents" aria-label="بازگشت">→</button><h1 style="margin:0;flex:1">دانلودها</h1></div>
+    <div class="card stack"><b>وضعیت ذخیره‌شده‌ها</b><div id="dlStat" class="muted" role="status">در حال بررسی…</div>
+      <div class="bar"><i id="dlBar" style="width:0%"></i></div><div id="dlMsg" class="muted" role="status"></div>
+      <button class="btn ghost small" id="dlCancel" data-act="dlCancel" hidden>توقف</button></div>
+    <button class="btn" data-dl data-act="dlAll">دانلود همه برای کار بدون اینترنت</button>
+    <div class="card stack"><b>🔊 صدای تلاوت</b>
+      <p class="muted" style="margin:0">فایل‌های صوتی‌ای که کنار برنامه در پوشهٔ audio گذاشته شده‌اند ذخیره می‌شوند.</p>
+      <div class="row"><button class="btn water small" data-dl data-act="dlAudio">دانلود</button><button class="btn ghost small" data-dl data-act="dlDel" data-what="audio">پاک‌کردن</button></div></div>
+    <div class="card stack"><b>🖼️ تصویر آیه‌ها</b>
+      <p class="muted" style="margin:0">${fa(TOTAL)} تصویر از EveryAyah (یا از پوشهٔ images اگر کنار برنامه باشد). حجم‌شان چند ده مگابایت است.</p>
+      <div class="row"><button class="btn water small" data-dl data-act="dlImg">دانلود</button><button class="btn ghost small" data-dl data-act="dlDel" data-what="img">پاک‌کردن</button></div></div>
+    <div class="card"><b>بستهٔ کامل بدون اینترنت</b>
+      <p class="muted" style="margin:6px 0">اگر اینترنت ندارید، فایل zip کامل (برنامه + صدا + تصویر آیه‌ها) را از صفحهٔ نسخه‌ها در GitHub بگیرید و پوشه را روی دستگاه باز کنید.</p>
+      <a href="https://github.com/mhsb/baghe-hefz/releases" target="_blank" rel="noopener">صفحهٔ نسخه‌ها (Releases)</a></div></div>`;
+};
+VIEW.downloads_after = () => { dlScan(); };
 
 /* ============ اتصال دکمه‌ها ============ */
 const applyFs = () => document.documentElement.style.setProperty('--fs', S.set.fs);
@@ -938,7 +1073,7 @@ const unlock = () => { unlockUntil = Date.now() + 10 * 60 * 1000; gateQ = null; 
 let surahRun = 0;
 
 const A = {
-  go: el => go(el.dataset.to || ''),
+  go: el => { if (demo && el.dataset.to === 'who') { toast('در حالت آزمایشی نمی‌شود کودک را عوض کرد'); return; } go(el.dataset.to || ''); },
   close: () => closeModal(),
   doConfirm: () => { const f = window._cf; closeModal(); f && f(); },
   install: async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); try { await deferredPrompt.userChoice; } catch (e) { } deferredPrompt = null; draw(); },
@@ -1009,7 +1144,7 @@ const A = {
   mathGo: () => { const v = normDigits($('#ans').value); if (gateQ && v === String(gateQ.r)) unlock(); else { toast('جواب درست نبود. دوباره امتحان کن'); gateQ = mathQ(false); draw(); } },
   pinGo: () => { if (normDigits($('#pin').value) === S.set.pin) unlock(); else { toast('رمز درست نبود'); $('#pin').value = ''; } },
   pinForgot: () => { gateQ = mathQ(true); draw(); },
-  lockNow: () => { unlockUntil = 0; gateQ = null; go(''); },
+  lockNow: () => { endDemo(true); unlockUntil = 0; gateQ = null; go(''); },
   setPin: () => openModal(`<div class="stack"><b style="font-size:1.15rem">رمز چهار رقمی</b>
     <input type="password" id="npin" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="رمز تازه" style="text-align:center;font-size:1.6rem;letter-spacing:.5em">
     <button class="btn" data-act="savePin">ذخیره</button><button class="btn ghost" data-act="close">بیخیال</button></div>`),
@@ -1026,9 +1161,31 @@ const A = {
   delKid: el => { const id = el.dataset.id; confirmBox('این کودک و پیشرفتش حذف می‌شود. مطمئنی؟', 'حذف کن', () => { delete S.profiles[id]; if (S.active === id) S.active = Object.keys(S.profiles)[0] || null; save(); draw(); }, true); },
   snd: () => { S.set.sound = !S.set.sound; save(); draw(); },
   img: () => { S.set.img = !S.set.img; save(); draw(); },
-  audit: () => auditAudio(),
-  cacheAudio: () => cacheAudio(),
   export: () => exportBackup(),
+
+  /* حالت آزمایشی */
+  demoStart: () => startDemo(),
+  demoTools: () => demoTools(),
+  demoExit: () => endDemo(),
+  demoRun: () => {
+    const s = +$('#dsur').value, a = +$('#day').value, kind = $('#dkind').value, bx = +$('#dbox').value;
+    if (kind === 'next' && a >= byId[s].v.length) { toast('آیهٔ آخر سوره «آیهٔ بعدی» ندارد'); return; }
+    closeModal();
+    if (kind === 'new') startSession([{ t: 'new', s, a }]);
+    else { P().ay[key(s, a)] = { b: bx, d: today(), n: 1, l: 0, t: today() }; startSession([{ t: 'rev', s, a, kind }]); }
+  },
+  demoPlant: () => { const bx = +$('#dgrow').value, t = today(); SUR.forEach(s => s.v.forEach((_, i) => { P().ay[key(s.id, i + 1)] = { b: bx, d: addDays(t, 1), n: 1, l: 0, t }; })); toast(`همه در مرحلهٔ «${GROW[bx]}» کاشته شدند. «باغ من» را ببینید`); draw(); },
+  demoThirst: () => { const t = today(); for (const k in P().ay) P().ay[k].d = t; toast('همهٔ گیاه‌ها تشنه شدند'); draw(); },
+  demoDay: () => { dayShift++; const b = $('[data-act=demoDay]'); if (b) b.textContent = dayLabel(); toast(`${fa(dayShift)} روز جلوتر. آیه‌های سررسیدشده تشنه می‌شوند`); draw(); },
+  demoParty: () => { celebrate(70); chime('big'); },
+  demoClear: () => { const p = P(); p.ay = {}; p.days = {}; p.stars = 0; p.streak = { cur: 0, best: 0, last: '' }; p.cur = PATH[0]; toast('باغ آزمایشی پاک شد'); draw(); },
+
+  /* دانلودها */
+  dlAll: () => dlRun('all'),
+  dlAudio: () => dlRun('audio'),
+  dlImg: () => dlRun('img'),
+  dlCancel: () => { dl.cancel = true; dlUI(true, 'در حال توقف…'); },
+  dlDel: el => confirmBox(el.dataset.what === 'audio' ? 'صداهای ذخیره‌شده پاک شوند؟' : 'تصویرهای ذخیره‌شده پاک شوند؟', 'پاک کن', () => dlDelete(el.dataset.what), true),
   import: () => $('#impf').click(),
 };
 
@@ -1046,6 +1203,7 @@ document.addEventListener('input', e => {
   save();
 });
 document.addEventListener('change', e => {
+  if (e.target.id === 'dsur') { fillAyahs(); return; }
   if (e.target.id !== 'impf') return;
   const f = e.target.files[0]; if (!f) return;
   f.text().then(t => {

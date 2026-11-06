@@ -5,6 +5,7 @@
 اجرا از پوشهٔ پروژه:
     python3 tools/fetch-everyayah.py            فقط دانلود  ->  audio-src/114001.mp3 ...
     python3 tools/fetch-everyayah.py --build    دانلود + ساخت audio/078.mp3 ... و timings.json (نیاز به ffmpeg)
+    python3 tools/fetch-everyayah.py --images   دانلود تصویر آیه‌ها  ->  images/114_5.png ... (برای کار کاملاً آفلاین)
 
 فایل‌هایی که قبلاً دانلود شده‌اند دوباره دانلود نمی‌شوند؛ اگر وسط کار قطع شد، دوباره اجرا کنید.
 پوشهٔ audio-src فقط مرحلهٔ میانی است؛ لازم نیست روی GitHub بگذارید (در .gitignore بیاید).
@@ -20,14 +21,14 @@ ROOT = HERE.parent
 
 
 def get(url, dest, tries=4):
-    if dest.exists() and dest.stat().st_size > 1000:
+    if dest.exists() and dest.stat().st_size > 100:
         return 'skip'
     for i in range(tries):
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'baghe-hifz-fetch/1.0'})
             with urllib.request.urlopen(req, timeout=30) as r:
                 data = r.read()
-            if len(data) < 1000:
+            if len(data) < 100:
                 raise ValueError('فایل خیلی کوچک است')
             tmp = dest.with_suffix('.part'); tmp.write_bytes(data); tmp.replace(dest)
             return 'ok'
@@ -43,13 +44,20 @@ def main():
     ap.add_argument('--reciter', default='Parhizgar_48kbps', help='نام پوشهٔ قاری در EveryAyah')
     ap.add_argument('--base', default='https://everyayah.com/data', help='آدرس پایه')
     ap.add_argument('--threads', type=int, default=4)
+    ap.add_argument('--images', action='store_true', help='به‌جای صدا، تصویر آیه‌ها را در پوشهٔ images دانلود کند')
+    ap.add_argument('--img-url', default='{base}/images_png/{s}_{v}.png', help='الگوی آدرس تصویر (اگر آدرس EveryAyah فرق کرد)')
     ap.add_argument('--build', action='store_true', help='بعد از دانلود، فایل‌های هر سوره و timings.json را بسازد')
     a = ap.parse_args()
+    if a.images and a.dest == str(ROOT / 'audio-src'):
+        a.dest = str(ROOT / 'images')
     if a.build and not shutil.which('ffmpeg'):
         sys.exit('ffmpeg نصب نیست. اول آن را نصب کنید (ffmpeg.org)، یا بدون --build اجرا کنید.')
     dest = pathlib.Path(a.dest); dest.mkdir(parents=True, exist_ok=True)
 
-    jobs = [(f'{a.base}/{a.reciter}/{s:03d}{v:03d}.mp3', dest / f'{s:03d}{v:03d}.mp3') for s, n in AYAHS.items() for v in range(1, n + 1)]
+    if a.images:
+        jobs = [(a.img_url.format(base=a.base, s=s, v=v), dest / f'{s}_{v}.png') for s, n in AYAHS.items() for v in range(1, n + 1)]
+    else:
+        jobs = [(f'{a.base}/{a.reciter}/{s:03d}{v:03d}.mp3', dest / f'{s:03d}{v:03d}.mp3') for s, n in AYAHS.items() for v in range(1, n + 1)]
     total, failed, done = len(jobs), [], 0
     with ThreadPoolExecutor(a.threads) as ex:
         for (url, path), res in zip(jobs, ex.map(lambda j: get(*j), jobs)):
@@ -63,9 +71,10 @@ def main():
         print('  ناموفق:', n, r)
     if failed:
         sys.exit('بعضی فایل‌ها دانلود نشد. اینترنت را بررسی و دوباره اجرا کنید (فایل‌های کامل دوباره دانلود نمی‌شوند).')
-    if a.build:
+    if a.build and not a.images:
         sys.exit(subprocess.call([sys.executable, str(HERE / 'make-audio.py'), str(dest)]))
-    print('برای ساخت فایل هر سوره:  python3 tools/make-audio.py', dest)
+    if not a.images:
+        print('برای ساخت فایل هر سوره:  python3 tools/make-audio.py', dest)
 
 
 if __name__ == '__main__':

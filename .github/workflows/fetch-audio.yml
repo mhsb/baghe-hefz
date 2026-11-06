@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'surah = یک فایل برای هر سوره + timings.json (۳۸ فایل، پیشنهادی) | ayah = همان ۵۶۴ فایل آیه‌به‌آیه'
+        description: 'surah = یک فایل برای هر سوره + timings.json (۳۸ فایل، پیشنهادی) | ayah = همان ۵۶۴ فایل آیه‌به‌آیه | images = ۵۶۴ تصویر آیه در پوشهٔ images'
         type: choice
         default: surah
-        options: [surah, ayah]
+        options: [surah, ayah, images]
 
 permissions:
   contents: write
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install ffmpeg
-        if: ${{ inputs.mode != 'ayah' }}
+        if: ${{ inputs.mode == 'surah' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
@@ -28,6 +28,8 @@ jobs:
         run: |
           if [ "${{ inputs.mode }}" = "ayah" ]; then
             python3 tools/fetch-everyayah.py --dest audio
+          elif [ "${{ inputs.mode }}" = "images" ]; then
+            python3 tools/fetch-everyayah.py --images
           else
             python3 tools/fetch-everyayah.py --build
           fi
@@ -35,7 +37,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audio
+          git add audio images
           git diff --cached --quiet && { echo "تغییری نبود"; exit 0; }
           git commit -m "افزودن صدای استاد پرهیزگار (${{ inputs.mode }})"
           git push
