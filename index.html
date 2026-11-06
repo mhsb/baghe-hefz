@@ -175,6 +175,72 @@ a{color:var(--leaf-d);font-weight:700}
 .ayah.has-img img{display:block;margin:0 auto;max-width:100%;height:auto}
 .ayah.has-img.blend img{mix-blend-mode:multiply}
 
+/* جای خالی: همه یک‌شکل و هم‌عرض (طول کلمه سرنخ نشود)؛ جای خالیِ فعال فقط زردرنگ و پررنگ‌تر است */
+.ayah:not(#rec) .w.hide{display:inline-block;width:3.1em;height:1.35em;overflow:hidden;vertical-align:middle;margin:0 .2em;border-radius:8px 8px 4px 4px;
+  background:none;border-bottom:5px dashed #aacdc0}
+.ayah:not(#rec) .w.hide.hl{background:#fff3c4;border-bottom:5px solid var(--gold)}
+.ar-sub{display:block;font-family:var(--quran);font-weight:400;font-size:1.3rem;color:var(--muted);line-height:1.6}
+
+/* باغ طبیعی صفحهٔ امروز */
+.garden.wild{display:block;padding:0;margin-top:34px}
+.garden .spot{position:absolute;display:block;transform-origin:50% 100%}
+.garden .deco{position:absolute;display:block;pointer-events:none;z-index:0}
+.garden .tuft{width:20px;height:12px;opacity:.85}
+.garden .pebble{width:11px;height:6px;border-radius:50%;background:#c9c1b3;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+.garden .bloom{width:9px;height:9px;border-radius:50%;background:hsl(var(--h) 85% 70%);box-shadow:0 0 0 2.5px #ffd45e inset,0 3px 0 -1px #2f8f5b}
+.butterfly{position:absolute;top:-6px;inset-inline-start:22%;font-size:20px;z-index:999;pointer-events:none;animation:flutter 7s ease-in-out infinite}
+@keyframes flutter{0%{transform:translate(0,0) rotate(-8deg)}25%{transform:translate(70px,16px) rotate(10deg)}50%{transform:translate(150px,-4px) rotate(-6deg)}75%{transform:translate(80px,26px) rotate(12deg)}100%{transform:translate(0,0) rotate(-8deg)}}
+
+/* مزرعه (باغ من) */
+.farm{position:relative;border-radius:28px;padding:18px 10px 26px;overflow:hidden;
+  background:radial-gradient(circle at 18% 22%,rgba(255,255,255,.16) 0 2px,transparent 3px) 0 0/34px 34px,radial-gradient(circle at 70% 64%,rgba(0,0,0,.05) 0 2px,transparent 3px) 0 0/46px 46px,linear-gradient(#bfe6a8,#9fd48b 40%,#8ccb7e);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.35),0 10px 26px -16px rgba(22,50,79,.55)}
+.field{position:relative;display:flex;flex-direction:column;gap:6px}
+.field:before{content:"";position:absolute;top:0;bottom:0;inset-inline-start:50%;width:14px;margin-inline-start:-7px;border-radius:99px;
+  background:repeating-linear-gradient(#e7d6b3 0 14px,#d9c49a 14px 18px);opacity:.75}
+.frow{position:relative;display:flex;align-items:center;gap:6px}
+.frow.l{flex-direction:row}.frow.r{flex-direction:row-reverse}
+.frow.full,.frow.band{justify-content:center}
+.frow.band{gap:14px;padding:4px 0}
+.decor{flex:1;display:grid;place-items:center;min-width:0}
+.decor svg{width:min(70px,100%);height:auto;filter:drop-shadow(0 3px 0 rgba(0,0,0,.08))}
+.decor.pond svg{width:min(120px,100%)}
+.bed{position:relative;display:flex;flex-direction:column;text-align:start;flex:none;z-index:1}
+.bed.sm{width:58%}.bed.md{width:76%}.bed.lg{width:100%}
+.bed .sign{position:relative;z-index:3;align-self:center;display:flex;align-items:center;gap:8px;margin-bottom:-14px;padding:6px 12px 6px 10px;border-radius:12px;
+  background:linear-gradient(#d8a96c,#bd8a4f);color:#fff9ea;box-shadow:0 3px 0 #8d6234,0 7px 12px -6px rgba(0,0,0,.45);text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.bed .sign:before,.bed .sign:after{content:"";position:absolute;top:-9px;width:3px;height:11px;background:#7a5230;border-radius:2px}
+.bed .sign:before{inset-inline-start:16px}.bed .sign:after{inset-inline-end:16px}
+.bed .sign .no{min-width:32px;height:32px;padding:0 4px;border-radius:10px;display:grid;place-items:center;background:var(--c,#2a8f58);font-weight:800;font-size:.95rem;text-shadow:none}
+.bed .nmx b{display:block;font-size:1.05rem;line-height:1.25}
+.bed .nmx .ar{display:block;font-family:var(--quran);font-style:normal;font-size:1rem;line-height:1.4;opacity:.92}
+.bed .sign .medal{font-size:1.25rem}
+.bed .flag{position:absolute;top:-24px;inset-inline-end:-6px;background:var(--gold);color:#4a3200;border-radius:99px;font-size:.78rem;font-weight:800;padding:0 10px;text-shadow:none;animation:bob 2s ease-in-out infinite;box-shadow:0 2px 0 #c98a0f}
+.bed .soil{position:relative;z-index:1;border-radius:18px;padding:22px 8px 8px;border:6px solid #b98853;
+  background:repeating-linear-gradient(0deg,#7d5236 0 11px,#8a5c3c 11px 22px);box-shadow:inset 0 6px 14px rgba(0,0,0,.28),0 5px 0 #8d6234,0 10px 16px -8px rgba(0,0,0,.4)}
+.bed .crops{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 0}
+.bed .crops .plant{filter:drop-shadow(0 2px 0 rgba(0,0,0,.18))}
+.bed .foot{position:relative;z-index:2;margin:10px 6px 0;display:flex;flex-direction:column}
+.bed .foot .bar{background:rgba(255,255,255,.55);height:9px;margin-top:0}
+.bed .foot .meta{font-size:.85rem;color:#264d33;font-weight:700;margin-top:2px}
+.bed.next .soil{border-color:var(--gold);box-shadow:inset 0 6px 14px rgba(0,0,0,.28),0 0 0 4px rgba(242,177,52,.45),0 0 26px rgba(242,177,52,.75)}
+.bed:active .soil{transform:translateY(2px)}
+@media (min-width:480px){.bed.sm{width:50%}.bed.md{width:66%}}
+
+.frow.pair{align-items:flex-start;gap:8px}
+.frow.pair .bed.half{width:calc(50% - 4px)}
+.frow.pair .decor{align-self:center}
+.bed .sign{max-width:100%;padding:5px 8px 5px 7px;gap:6px}
+.bed .nmx b{font-size:1rem}
+.bed .sign .no{min-width:28px;height:28px;font-size:.85rem}
+.bed .soil{padding:20px 4px 6px;border-width:5px}
+.bed .crops{align-items:flex-end;gap:0}
+.plant.flat{height:calc(var(--pw,44px)*.4)}
+.plant.flat svg{height:100%}
+.bed .crops .plant:not(.flat){margin-top:-4px}
+.bed.lg .soil{padding-inline:8px}
+.farm{padding-top:34px}
+
 [hidden]{display:none!important}
 </style>
 </head>
@@ -392,10 +458,10 @@ function toast(msg) { document.querySelectorAll('.toast').forEach(e => e.remove(
 
 /* ============ گیاه‌ها (SVG) ============ */
 const DROP = '<svg class="drop" viewBox="0 0 12 16" aria-hidden="true"><path d="M6 1C6 1 1 7 1 10.5a5 5 0 0010 0C11 7 6 1 6 1z" fill="#3fa7e0"/><path d="M4 11a2.4 2.4 0 002 2.4" stroke="#fff" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>';
-function plantSVG(st, hue) {
+function plantSVG(st, hue, compact) {
   const L = '#3fae72', LD = '#2a8f58', petal = `hsl(${hue} 80% 63%)`, petalD = `hsl(${hue} 70% 50%)`;
   const soil = c => `<ellipse cx="20" cy="52" rx="15" ry="4.2" fill="${c[0]}"/><ellipse cx="20" cy="51" rx="11" ry="2.6" fill="${c[1]}"/>`;
-  if (st === 0) return `<svg viewBox="0 0 40 56" aria-hidden="true">${soil(['#c9b9a3', '#d8cab8'])}</svg>`;
+  if (st === 0) return `<svg viewBox="${compact ? '0 40 40 16' : '0 0 40 56'}" aria-hidden="true">${soil(['#c9b9a3', '#d8cab8'])}</svg>`;
   const leaf = (x, y, r, sz) => `<ellipse cx="${x}" cy="${y}" rx="${sz}" ry="${sz * .5}" fill="${L}" transform="rotate(${r} ${x} ${y})"/>`;
   let g = soil(['#8a5a3b', '#a2704c']);
   const stem = top => `<path d="M20 51V${top}" stroke="${LD}" stroke-width="2.6" stroke-linecap="round"/>`;
@@ -410,8 +476,9 @@ function plantSVG(st, hue) {
   }
   return `<svg viewBox="0 0 40 56" aria-hidden="true">${g}</svg>`;
 }
-function plantEl(s, a, w, pop) {
-  return `<span class="plant${pop ? ' pop' : ''}" style="--pw:${w}px" title="${esc(byId[s].fa)} ${fa(a)}">${plantSVG(stageOf(s, a), hueOf(s))}${isDue(s, a) ? DROP : ''}</span>`;
+function plantEl(s, a, w, pop, compact) {
+  const st = stageOf(s, a), flat = compact && st === 0;
+  return `<span class="plant${pop ? ' pop' : ''}${flat ? ' flat' : ''}" style="--pw:${w}px" title="${esc(byId[s].fa)} ${fa(a)}">${plantSVG(st, hueOf(s), flat)}${isDue(s, a) ? DROP : ''}</span>`;
 }
 
 /* ============ ناوبری و قالب ============ */
@@ -472,7 +539,28 @@ function plan() {
   const doneNew = (p.days[today()] || {}).nw || 0;
   return { due: due.length, rev: Math.min(due.length, p.goal.revMax), nn, doneNew, newLeft: nn ? Math.max(0, p.goal.newPerDay - doneNew) : 0 };
 }
-function gardenOf(sid, pw) { let h = ''; for (let a = 1; a <= byId[sid].v.length; a++) h += plantEl(sid, a, pw); return h; }
+const rnd = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
+/* باغ طبیعی: جای هر گیاه ثابت ولی پراکنده است؛ ردیف‌های عقب کوچک‌ترند و علف و گل و پروانه دور و برشان هست */
+function wildGarden(sid) {
+  const n = byId[sid].v.length, rows = n <= 7 ? 2 : n <= 15 ? 3 : n <= 30 ? 4 : 6, per = Math.ceil(n / rows);
+  const base = n <= 7 ? 58 : n <= 15 ? 46 : n <= 30 ? 36 : 28, step = base * .92, H = Math.ceil(16 + (rows - .25) * step + base * 1.4 * 1.1 + 8);
+  let back = '', front = '';
+  for (let k = 0; k < 14 + rows * 3; k++) {
+    const x = rnd(sid, 300 + k) * 94 + 3, y = 10 + rnd(sid, 400 + k) * (H - 22), kind = k % 5;
+    back += kind < 2 ? `<svg class="deco tuft" style="right:${x}%;top:${y}px" viewBox="0 0 24 14" aria-hidden="true"><path d="M2 14L6 3M9 14L12 0M15 14L19 4M22 14L20 8" stroke="#2f8f5b" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>`
+      : kind === 2 ? `<i class="deco pebble" style="right:${x}%;top:${y}px"></i>`
+      : `<i class="deco bloom" style="right:${x}%;top:${y}px;--h:${(FL[(k + sid) % FL.length])}"></i>`;
+  }
+  for (let i = 0; i < n; i++) {
+    const a = i + 1, row = Math.floor(i / per), col = i % per, cols = row < rows - 1 ? per : n - per * (rows - 1);
+    let x = (col + .5 + (per - cols) / 2 + (row % 2 ? .3 : -.1)) / per + (rnd(sid, i) - .5) * .8 / per;
+    x = Math.min(.94, Math.max(.06, x));
+    const depth = (row + .5) / rows, sc = .84 + .28 * depth + (rnd(sid, i + 50) - .5) * .1, pw = Math.round(base * sc);
+    const top = Math.round(16 + (row + (rnd(sid, i + 99) - .5) * .5) * step), rot = ((rnd(sid, i + 150) - .5) * 6).toFixed(1);
+    front += `<span class="spot" style="right:${(x * 100).toFixed(1)}%;top:${top}px;z-index:${top};transform:translateX(50%) rotate(${rot}deg)">${plantEl(sid, a, pw)}</span>`;
+  }
+  return `<div class="garden wild" style="height:${H}px">${back}<span class="butterfly" aria-hidden="true">🦋</span>${front}</div>`;
+}
 VIEW.home = () => {
   const p = P(), pl = plan(), s = byId[p.cur], n = s.v.length, st = surahStats(p.cur);
   const pw = n <= 7 ? 58 : n <= 15 ? 46 : n <= 30 ? 36 : 28;
@@ -494,30 +582,56 @@ VIEW.home = () => {
   return `<div class="stack"><div><h1>سلام ${esc(p.name)}!</h1></div>
     <section class="scene" aria-label="باغ سورهٔ ${esc(s.fa)}"><i class="sun"></i><i class="cloud"></i><i class="hill"></i>
       <div class="head">سورهٔ ${s.fa}<small>${fa(st.l)} از ${fa(n)} آیه کاشته شده</small></div>
-      <div class="garden">${gardenOf(p.cur, pw)}</div></section>
+      ${wildGarden(p.cur)}</section>
     <div class="card">${body}</div>
     ${deferredPrompt ? '<button class="btn ghost" data-act="install">نصب برنامه روی دستگاه</button>' : ''}</div>`;
 };
 
 /* ============ باغ و سوره‌ها ============ */
+const DECO = {
+  tree: '<svg viewBox="0 0 60 84" aria-hidden="true"><ellipse cx="30" cy="80" rx="21" ry="4" fill="rgba(0,0,0,.14)"/><rect x="26" y="48" width="9" height="32" rx="3" fill="#8a5a3b"/><circle cx="30" cy="32" r="22" fill="#2f9e6b"/><circle cx="18" cy="42" r="15" fill="#3fae72"/><circle cx="43" cy="42" r="15" fill="#2a8f58"/><circle cx="25" cy="24" r="7" fill="#6fd09a" opacity=".6"/></svg>',
+  bush: '<svg viewBox="0 0 70 46" aria-hidden="true"><ellipse cx="35" cy="42" rx="26" ry="3.5" fill="rgba(0,0,0,.14)"/><circle cx="20" cy="30" r="14" fill="#2a8f58"/><circle cx="36" cy="24" r="17" fill="#3fae72"/><circle cx="52" cy="31" r="13" fill="#2f9e6b"/><circle cx="30" cy="22" r="2.6" fill="#e8577d"/><circle cx="44" cy="28" r="2.6" fill="#e8577d"/><circle cx="22" cy="33" r="2.6" fill="#e8577d"/></svg>',
+  flowers: '<svg viewBox="0 0 70 50" aria-hidden="true"><g stroke="#2a8f58" stroke-width="2.4" stroke-linecap="round"><path d="M16 48V26M35 48V16M54 48V28"/></g><circle cx="16" cy="22" r="7" fill="#ff8fb1"/><circle cx="16" cy="22" r="2.8" fill="#ffd45e"/><circle cx="35" cy="12" r="8" fill="#ffd45e"/><circle cx="35" cy="12" r="3" fill="#f2994a"/><circle cx="54" cy="24" r="7" fill="#b79cf0"/><circle cx="54" cy="24" r="2.8" fill="#ffd45e"/></svg>',
+  hay: '<svg viewBox="0 0 70 52" aria-hidden="true"><ellipse cx="35" cy="48" rx="28" ry="3.5" fill="rgba(0,0,0,.14)"/><rect x="8" y="14" width="54" height="32" rx="14" fill="#e8c35f"/><path d="M14 24h42M14 32h42M14 40h42" stroke="#c9a23c" stroke-width="2" stroke-linecap="round"/><circle cx="62" cy="30" r="14" fill="#f0d27a"/><circle cx="62" cy="30" r="7" fill="none" stroke="#c9a23c" stroke-width="2"/></svg>',
+  pond: '<svg viewBox="0 0 120 56" aria-hidden="true"><ellipse cx="60" cy="30" rx="54" ry="22" fill="#9bd4ea"/><ellipse cx="60" cy="30" rx="54" ry="22" fill="none" stroke="#c9ad80" stroke-width="5"/><ellipse cx="46" cy="24" rx="18" ry="5" fill="#cdeaf5" opacity=".8"/><ellipse cx="78" cy="36" rx="9" ry="4.5" fill="#3fae72"/><ellipse cx="38" cy="38" rx="7" ry="3.5" fill="#58c58b"/><circle cx="78" cy="34" r="2.4" fill="#ff8fb1"/></svg>'
+};
+const DECO_ORDER = ['tree', 'bush', 'flowers', 'hay', 'tree', 'flowers', 'bush'];
 VIEW.garden = () => {
   const t = totals(), p = P();
-  const rows = PATH.map(sid => {
+  const bedOf = sid => {
     const s = byId[sid], st = surahStats(sid), pct = Math.round(st.l / st.n * 100), isCur = sid === p.cur && !st.done;
-    return `<button class="plot${isCur ? ' next' : ''}" data-act="go" data-to="s/${sid}"><span class="num" style="--c:hsl(${hueOf(sid)} 55% 42%)">${fa(sid)}</span>
-      <span style="flex:1;min-width:0"><div class="nm">${s.fa}<span class="ar">${s.ar}</span> ${isCur ? '<span class="tag">ادامه</span>' : ''}</div>
-      <div class="bar"><i style="width:${pct}%"></i></div><div class="meta">${fa(st.l)} از ${fa(st.n)} آیه${st.due ? ` · 💧 ${fa(st.due)}` : ''}</div></span><span class="medal">${medalOf(sid)}</span></button>`;
-  }).join('');
+    const size = st.n <= 16 ? 'half' : 'lg', pw = st.n <= 8 ? 28 : st.n <= 16 ? 24 : st.n <= 30 ? 21 : 19;
+    let plants = ''; for (let a = 1; a <= st.n; a++) plants += plantEl(sid, a, pw, false, true);
+    return { size, html: `<button class="bed ${size}${isCur ? ' next' : ''}" data-act="go" data-to="s/${sid}" aria-label="سورهٔ ${esc(s.fa)}، ${fa(st.l)} از ${fa(st.n)} آیه کاشته شده${isCur ? '، ادامه' : ''}">
+      <span class="sign">${isCur ? '<span class="flag">ادامه</span>' : ''}<span class="no" style="--c:hsl(${hueOf(sid)} 55% 40%)">${fa(sid)}</span>
+        <span class="nmx"><b>${s.fa}</b><em class="ar" lang="ar">${s.ar}</em></span><span class="medal">${medalOf(sid)}</span></span>
+      <span class="soil"><span class="crops">${plants}</span></span>
+      <span class="foot"><span class="bar"><i style="width:${pct}%"></i></span><span class="meta">${fa(st.l)} از ${fa(st.n)} آیه${st.due ? ` · 💧 ${fa(st.due)}` : ''}</span></span></button>` };
+  };
+  const bands = ['tree|bush|flowers|hay', 'pond|flowers', 'bush|tree|hay', 'flowers|pond|bush'];
+  let beds = '', k = 0, rowN = 0;
+  const band = () => { const l = bands[k++ % bands.length].split('|'); return `<div class="frow band" aria-hidden="true">${l.map(x => `<span class="decor ${x}">${DECO[x]}</span>`).join('')}</div>`; };
+  for (let i = 0; i < PATH.length;) {
+    const x = bedOf(PATH[i]);
+    if (x.size === 'lg') { beds += `<div class="frow full">${x.html}</div>`; i++; }
+    else {
+      const y = i + 1 < PATH.length ? bedOf(PATH[i + 1]) : null;
+      if (y && y.size === 'half') { beds += `<div class="frow pair">${x.html}${y.html}</div>`; i += 2; }
+      else { beds += `<div class="frow pair">${x.html}<span class="decor">${DECO.tree}</span></div>`; i++; }
+    }
+    if (++rowN % 3 === 0 && i < PATH.length) beds += band();
+  }
   return `<div class="stack"><h1>باغ من</h1>
     <div class="card stat-grid"><div><b>${fa(t.l)}</b><span>آیهٔ کاشته‌شده</span></div><div><b>${fa(t.bloom)}</b><span>گل شکفته</span></div><div><b>${fa(t.due)}</b><span>تشنهٔ آب 💧</span></div></div>
     <div class="legend"><span>🥉 همه کاشته شد</span><span>🥈 همه جا افتاد</span><span>🥇 همه شکفت</span></div>
-    <div>${rows}</div><p class="muted" style="text-align:center">ترتیب سوره‌ها از کوتاه‌ترها (ناس، فلق، اخلاص…) شروع می‌شود.</p></div>`;
+    <div class="farm" aria-label="نقشهٔ مزرعه؛ هر کرت یک سوره است"><div class="field">${beds}</div></div>
+    <p class="muted" style="text-align:center">ترتیب کرت‌ها از کوتاه‌ترین سوره‌ها (ناس، فلق، اخلاص…) شروع می‌شود. روی هر کرت بزن.</p></div>`;
 };
 VIEW.s = ([id]) => {
   const sid = +id, s = byId[sid]; if (!s) return VIEW.garden();
   const st = surahStats(sid), pct = Math.round(st.l / st.n * 100), nn = nextNew(sid), nxt = nn && nn.s === sid ? nn : null;
   const rows = s.v.map((v, i) => { const a = i + 1; return `<button class="ayrow" data-act="sheet" data-s="${sid}" data-a="${a}"><span class="no">${fa(a)}</span><span class="pl">${plantEl(sid, a, 34)}</span><span class="tx">${esc(v[0])}</span></button>`; }).join('<hr style="border:0;border-top:1px solid var(--line);margin:0">');
-  return `<div class="stack"><div class="row" style="gap:8px"><button class="btn ghost small" style="flex:none" data-act="go" data-to="garden" aria-label="بازگشت">→</button><h1 style="margin:0;flex:1">سورهٔ ${s.fa} <span class="muted" style="font-family:var(--quran);font-weight:400">${s.ar}</span> ${medalOf(sid)}</h1></div>
+  return `<div class="stack"><div class="row" style="gap:8px"><button class="btn ghost small" style="flex:none" data-act="go" data-to="garden" aria-label="بازگشت">→</button><h1 style="margin:0;flex:1;line-height:1.35">سورهٔ ${s.fa} ${medalOf(sid)}<span class="ar-sub" lang="ar">${s.ar}</span></h1></div>
     <div class="card"><div class="meta muted">${fa(st.l)} از ${fa(st.n)} آیه کاشته شده</div><div class="bar"><i style="width:${pct}%"></i></div>
       ${s.id !== 1 ? `<div class="bsm" style="margin-top:8px">${esc(D.bismillah)}</div>` : ''}
       <div class="stack" style="margin-top:12px">${nxt ? `<button class="btn" data-act="learnFrom" data-s="${sid}" data-a="${nxt.a}">${st.l ? 'ادامهٔ یادگیری' : 'شروع یادگیری'} (آیهٔ ${fa(nxt.a)})</button>` : ''}
