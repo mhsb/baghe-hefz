@@ -286,6 +286,23 @@ main{position:relative;z-index:0}
 .gcard .gem{font-size:2.3rem}.gcard .gtx{flex:1;display:grid}.gcard small{color:var(--muted);font-weight:500}.gcard .go{font-size:1.8rem;color:var(--muted)}
 .sidegames{display:grid;gap:6px}.sidegames .row{flex-wrap:wrap}
 
+/* دونده */
+.gcard.runner{background:linear-gradient(135deg,#fff0d6,#ffe0cc);box-shadow:0 0 0 2px #f5b57a,0 5px 0 #eaa062;margin-top:6px}
+.rn{display:flex;flex-direction:column;gap:8px}
+.rn-top{display:flex;align-items:center;gap:12px;padding:4px 2px}.rn-top .x{font-size:1.3rem;padding:6px 10px}.rn-top span{margin-inline-start:auto}
+.rn-stage{position:relative;height:calc(100vh - 190px);min-height:380px;max-height:560px;border-radius:24px;overflow:hidden;touch-action:pan-y;user-select:none;isolation:isolate}
+.rn-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#rnGate{position:absolute;inset:0;pointer-events:none}
+.rn-card{position:absolute;box-sizing:border-box;padding:6px 8px;text-align:center;direction:rtl;background:#fffdf4;border:3px solid #c9a24b;border-radius:12px;box-shadow:0 5px 0 #a9822e;font-family:var(--quran);font-size:calc(1.2rem*var(--fs));line-height:1.8;transform-origin:50% 100%;transition:opacity .4s}
+.rn-card.burn{background:#ffe3d1;border-color:#e0572b}
+.rn-card.pass{border-color:#3aa766;background:#e9f8ef;opacity:0}
+.rn-msg{position:absolute;top:34%;left:0;right:0;text-align:center;font-weight:800;font-size:1.6rem;color:#b36b00;text-shadow:0 2px 0 #fff;opacity:0;pointer-events:none}
+.rn-msg.go{animation:rnpop 1.1s ease-out}
+@keyframes rnpop{0%{opacity:0;transform:translateY(14px) scale(.8)}20%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
+.rn-ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(22,50,79,.35);padding:14px}
+.rn-panel{background:#fff;border-radius:22px;padding:18px;text-align:center;width:100%;max-width:340px}
+.rn-ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
 [hidden]{display:none!important}
 </style>
 </head>
@@ -552,7 +569,7 @@ function draw() {
   let v = name;
   if (!P()) v = 'who';
   if (v === 'lesson' && !sess) { go('home'); return; }
-  const hideNav = v === 'lesson' || v === 'who';
+  const hideNav = v === 'lesson' || v === 'who' || v === 'run';
   document.body.classList.toggle('hide-nav', hideNav);
   const top = $('#top'), nav = $('#nav');
   if (P() && !hideNav) {
@@ -1178,8 +1195,235 @@ VIEW.games = () => {
   return `<div class="stack"><h1>بازی‌ها</h1>
     <p class="muted" style="margin:0">با آیه‌هایی که کاشته‌ای بازی کن تا محکم‌تر شوند. هر دورِ بی‌اشتباه یک ستاره دارد ⭐</p>
     ${nL ? '' : '<div class="card"><b>🌱 اول چند آیه بکار</b><p class="muted" style="margin:6px 0 0">بعد از کاشتن آیه‌ها، بازی‌ها باز می‌شوند.</p></div>'}
-    <div>${cards}</div></div>`;
+    <div>${cards}</div>
+    ${runCard()}</div>`;
 };
+
+const runCard = () => { const ok = runPlan().length > 0; return `<button class="gcard runner" data-act="runOpen" ${ok ? '' : 'disabled'}><span class="gem" aria-hidden="true">🏃</span><span class="gtx"><b>دونده</b><small>${ok ? 'از ناس شروع کن و آیهٔ درستِ بعدی را انتخاب کن؛ آیهٔ غلط آتش است! هر چه سوره‌های بیشتر، امتیاز بیشتر' : 'اول آیهٔ اول سورهٔ ناس را بکار'}</small></span><span class="go" aria-hidden="true">‹</span></button>`; };
+
+/* ============ دونده ============
+   سه مسیر؛ در هر دروازه سه «آیه» پیش‌رو هست. فقط آیهٔ درستِ بعدی راه را باز می‌کند و دو تای دیگر آتش‌اند.
+   ترتیب مثل ترتیب حفظ: بسم‌الله ← آیه‌های ناس ← (مرحلهٔ سکه) ← بسم‌الله ← فلق ... تا جایی که کودک پشت‌سرهم حفظ کرده. */
+const BISM = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ';
+const RN_PACE = [{ n: 'آرام', hold: 8, appr: 3.8 }, { n: 'متوسط', hold: 6, appr: 2.9 }, { n: 'تند', hold: 4.5, appr: 2.2 }];
+const RN = { phase: 'idle', loop: false, cv: null, W: 0, H: 0, lane: 1, rx: 0, scroll: 0, t: 0, ev: [], ei: 0, q: null, score: 0, coins: 0, ayahs: 0, sdone: 0, audioBusy: false, atok: 0, bonus: null, dt: 0, last: 0, pop: null, newBest: false, stars: 0 };
+
+function runPlan() {                                   // سوره‌هایی که از ناس به ترتیب و پشت‌سرهم حفظ شده‌اند (آیه‌ها هم از اول سوره به ترتیب)
+  const segs = [];
+  for (const sid of PATH) {
+    const vl = byId[sid].v.length; let n = 0; while (n < vl && learned(sid, n + 1)) n++;
+    if (!n) break; segs.push({ s: sid, n, full: n === vl }); if (n < vl) break;
+  }
+  return segs;
+}
+function runEvents() {
+  const ev = []; runPlan().forEach((g, si) => { for (let a = 0; a <= g.n; a++) ev.push({ k: 'q', s: g.s, a, si }); if (g.full) ev.push({ k: 'bonus', s: g.s, si }); });
+  return ev;
+}
+const rnPace = () => RN_PACE[Math.min(2, Math.max(0, S.set.runPace == null ? 1 : S.set.runPace))];
+const rnAyText = ev => ev.a ? byId[ev.s].v[ev.a - 1][0] : BISM;
+
+function rnOpts(ev) {
+  const g = byId[ev.s], cor = rnAyText(ev), pool = [], add = t => { if (t !== cor && !pool.includes(t)) pool.push(t); };
+  if (ev.a === 0) add(g.v[0][0]);                      // آیهٔ اول سوره بعد از بسم‌الله می‌آید، پس به‌جای بسم‌الله مانع است
+  shuffle(g.v.map(v => v[0])).forEach(add);
+  if (pool.length < 3) shuffle(SUR.flatMap(s => s.v.map(v => v[0]))).forEach(t => pool.length < 8 && add(t));
+  const wr = ev.a === 0 ? [g.v[0][0], ...shuffle(pool.filter(t => t !== g.v[0][0]))].slice(0, 2) : shuffle(pool).slice(0, 2);
+  const texts = [cor, ...wr]; let shown = texts;
+  for (let k = 3; k <= 14; k++) {
+    shown = texts.map(t => { const w = t.split(' '); return w.length <= k + 1 ? t : w.slice(0, k).join(' ') + ' …'; });
+    if (new Set(shown).size === 3) break;
+  }
+  const order = shuffle([0, 1, 2]);
+  return { cards: order.map(i => shown[i]), correct: order.indexOf(0) };
+}
+
+/* ---- شروع و پایان ---- */
+function rnStart() {
+  RN.ev = runEvents(); if (!RN.ev.length) return;
+  Object.assign(RN, { ei: 0, score: 0, coins: 0, ayahs: 0, sdone: 0, lane: 1, bonus: null, newBest: false, stars: 0, audioBusy: false, dt: 0, pop: null });
+  stopAudio(); RN.atok++; RN.shown = 0; rnNext(true); rnHud(); rnOverlay();
+}
+function rnNext(first) {
+  const e = RN.ev[RN.ei];
+  if (!e) { rnFinish(true); return; }
+  if (e.k === 'q') { const o = rnOpts(e); RN.q = { e, o, p: 0, t: 0, over: null }; RN.phase = 'run'; rnGate(); }
+  else {
+    RN.sdone++; RN.score += 50 * (e.si + 1); RN.q = null; RN.phase = 'bonus'; RN.bonus = { t: 0, spawn: .6, coins: [], run: 0, lane: 1, got: 0 };
+    rnGate(); rnPopup('مرحلهٔ سکه‌ها 🪙'); chime('big');
+  }
+  rnHud();
+}
+function rnFinish(win) {
+  const p = P(); RN.phase = win ? 'win' : 'dead'; RN.dt = win ? 1.2 : 0;
+  if (RN.score > (p.rb || 0)) { p.rb = RN.score; RN.newBest = RN.score > 0; }
+  RN.stars = Math.min(5, RN.sdone); if (RN.stars) addStars(RN.stars); else touchDay();
+  save(); rnGate();
+}
+async function rnAudio(ev) {                           // صدای آیهٔ جواب‌داده‌شده، همین‌طور که دونده می‌دود
+  const my = ++RN.atok; RN.audioBusy = true;
+  try { await (ev.a ? playAyah(ev.s, ev.a) : playAyah(1, 1)); } catch (e) { }
+  if (my === RN.atok) RN.audioBusy = false;
+}
+function rnResolve() {
+  const q = RN.q, ok = RN.lane === q.o.correct;
+  if (ok) {
+    const pts = 10 * (q.e.si + 1); RN.score += pts; RN.ayahs++; chime();
+    q.over = 'ok'; rnPopup(`+${fa(pts)}`); rnAudio(q.e); RN.ei++; rnHud();
+    rnNext();
+  } else { chime('bad'); q.over = 'burn'; RN.phase = 'dying'; RN.dt = 0; stopAudio(); RN.atok++; RN.audioBusy = false; }
+}
+
+/* ---- بروزرسانی ---- */
+function rnUpdate(dt) {
+  RN.t += dt; const ph = RN.phase;
+  if (ph === 'run' || ph === 'bonus' || ph === 'dying') RN.scroll += dt * (ph === 'dying' ? .3 : 1.6);
+  if (ph === 'run') {
+    const q = RN.q, pc = rnPace(); q.t += dt;
+    if (q.t < pc.hold || RN.audioBusy) { if (q.p < .8) q.p = Math.min(.8, q.p + dt * .8 / 2.2); }
+    else q.p = Math.min(1, q.p + dt * .2 / pc.appr);
+    if (q.p >= 1) rnResolve();
+  } else if (ph === 'bonus') {
+    const b = RN.bonus; b.t += dt; b.spawn -= dt;
+    if (b.t < 9 && b.spawn <= 0) {
+      if (!b.run) { b.run = Math.random() < .5 ? 3 : 1; b.lane = Math.random() * 3 | 0; }
+      b.coins.push({ l: b.lane, f: 0 }); b.run--; b.spawn = b.run ? .28 : .7;
+    }
+    b.coins.forEach(c => c.f += dt / 1.3);
+    b.coins = b.coins.filter(c => { if (c.f < 1) return true; if (c.l === RN.lane) { RN.coins++; RN.score += 5; b.got++; chime(); rnHud(); } return false; });
+    if (b.t >= 9 && !b.coins.length) { RN.ei++; rnNext(); }
+  } else if (ph === 'dying') { RN.dt += dt; if (RN.dt > 1.5) rnFinish(false); }
+  else if (ph === 'dead' || ph === 'win') { RN.dt += dt; if (RN.dt > .5 && !RN.shown) { RN.shown = 1; rnOverlay(); } }
+  rnPlaceGate();
+}
+
+/* ---- هندسهٔ صحنه ---- */
+const geo = () => {
+  const W = RN.W, H = RN.H, hor = H * .2, yr = H * .8, lw = W * .3, G = f => Math.pow(Math.max(0, f), 1.7);
+  return { W, H, hor, yr, lw, sc: f => .18 + .82 * G(f), y: f => hor + (yr - hor) * G(f), x: (l, f) => W / 2 + (l - 1) * lw * (.18 + .82 * G(f)) };
+};
+function rnSize() {
+  const st = $('#rnStage'); if (!st || !RN.cv) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1); RN.W = st.clientWidth; RN.H = st.clientHeight;
+  RN.cv.width = RN.W * dpr; RN.cv.height = RN.H * dpr; RN.cv.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  RN.rx = geo().x(RN.lane, 1);
+}
+function flame(g, x, y, w, h, t, k) {
+  for (let i = 0; i < 5; i++) {
+    const fx = x + (i - 2) * w / 5, hh = h * (.6 + .4 * Math.sin(t * 9 + i * 1.7 + k)), ww = w / 4.2;
+    const gr = g.createLinearGradient(0, y, 0, y - hh); gr.addColorStop(0, '#ff5a1f'); gr.addColorStop(.55, '#ffab2e'); gr.addColorStop(1, 'rgba(255,230,120,0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(fx - ww, y); g.quadraticCurveTo(fx - ww * .6, y - hh * .6, fx + Math.sin(t * 7 + i) * ww * .4, y - hh); g.quadraticCurveTo(fx + ww * .7, y - hh * .5, fx + ww, y); g.closePath(); g.fill();
+  }
+}
+function rnDraw() {
+  const c = RN.cv; if (!c || !RN.W) return; const g = c.getContext('2d'), o = geo(), { W, H, hor, yr, lw } = o;
+  let gr = g.createLinearGradient(0, 0, 0, hor + 30); gr.addColorStop(0, '#9ed8ec'); gr.addColorStop(1, '#e9f8ef'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#ffd86b'; g.beginPath(); g.arc(W * .78, hor * .6, 26, 0, 7); g.fill();
+  g.fillStyle = '#7fcf9c'; g.beginPath(); g.moveTo(0, hor + 2); for (let x = 0; x <= W; x += 20) g.lineTo(x, hor - 22 - 14 * Math.sin(x / 55)); g.lineTo(W, hor + 2); g.fill();
+  gr = g.createLinearGradient(0, hor, 0, H); gr.addColorStop(0, '#74c98f'); gr.addColorStop(1, '#3f9f6a'); g.fillStyle = gr; g.fillRect(0, hor, W, H - hor);
+  const FM = 1.25;                                            // مسیر شنی
+  g.fillStyle = '#ecdcae'; g.beginPath(); g.moveTo(W / 2 - 1.5 * lw * o.sc(0), hor); g.lineTo(W / 2 + 1.5 * lw * o.sc(0), hor); g.lineTo(W / 2 + 1.5 * lw * o.sc(FM), o.y(FM)); g.lineTo(W / 2 - 1.5 * lw * o.sc(FM), o.y(FM)); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineCap = 'round';
+  for (let k = 0; k < 10; k++) {
+    const f = ((k + RN.scroll) % 10) / 10 * FM, f2 = f + .05; g.lineWidth = 1 + 5 * o.sc(f);
+    for (const d of [-.5, .5]) { g.beginPath(); g.moveTo(W / 2 + d * lw * o.sc(f), o.y(f)); g.lineTo(W / 2 + d * lw * o.sc(f2), o.y(f2)); g.stroke(); }
+  }
+  for (let k = 0; k < 8; k++) {                                // درخت‌های کنار مسیر
+    const f = ((k + RN.scroll * .7) % 8) / 8 * 1.15, s = o.sc(f);
+    for (const d of [-1, 1]) {
+      const x = W / 2 + d * lw * s * (2 + (k % 3) * .45), y = o.y(f), r = 34 * s;
+      g.fillStyle = '#7a5a3a'; g.fillRect(x - 4 * s, y - 36 * s, 8 * s, 36 * s);
+      g.fillStyle = k % 2 ? '#2f8f58' : '#3aa766'; g.beginPath(); g.arc(x, y - 48 * s, r, 0, 7); g.arc(x - r * .6, y - 36 * s, r * .7, 0, 7); g.arc(x + r * .6, y - 36 * s, r * .7, 0, 7); g.fill();
+    }
+  }
+  const q = RN.q;
+  if (RN.phase === 'run' || RN.phase === 'dying') {            // آتش پای دروازه؛ هر سه مسیر مثل هم‌اند تا جواب لو نرود
+    if (q && q.over !== 'ok') for (let l = 0; l < 3; l++) flame(g, o.x(l, q.p), o.y(q.p), lw * o.sc(q.p) * .9, 46 * o.sc(q.p), RN.t, l);
+  }
+  if (RN.bonus && RN.phase === 'bonus') RN.bonus.coins.forEach(cn => {
+    const s = o.sc(cn.f), x = o.x(cn.l, cn.f), y = o.y(cn.f) - 16 * s, r = 15 * s * (.8 + .2 * Math.abs(Math.cos(RN.t * 6 + cn.l)));
+    g.fillStyle = '#f2b134'; g.beginPath(); g.ellipse(x, y, r, 15 * s, 0, 0, 7); g.fill(); g.strokeStyle = '#c98a14'; g.lineWidth = 2 * s; g.stroke();
+    g.fillStyle = '#ffe596'; g.beginPath(); g.ellipse(x - r * .25, y - 4 * s, r * .35, 6 * s, 0, 0, 7); g.fill();
+  });
+  RN.rx += (o.x(RN.lane, 1) - RN.rx) * .25;                    // دونده
+  const dead = RN.phase === 'dying' || RN.phase === 'dead', S0 = H * .16, x = RN.rx, y = yr, sw = dead ? 0 : Math.sin(RN.t * 13), run = RN.phase === 'run' || RN.phase === 'bonus';
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x, y + 2, S0 * .3, S0 * .08, 0, 0, 7); g.fill();
+  g.lineCap = 'round'; g.lineWidth = S0 * .12;
+  g.strokeStyle = '#34527f'; for (const d of [-1, 1]) { g.beginPath(); g.moveTo(x, y - S0 * .42); g.lineTo(x + d * sw * S0 * .22, y - S0 * .02 - (run && d * sw > 0 ? S0 * .08 : 0)); g.stroke(); }
+  g.fillStyle = dead ? '#8a4a3a' : '#2f9e6b'; g.beginPath(); g.roundRect ? g.roundRect(x - S0 * .17, y - S0 * .8, S0 * .34, S0 * .42, S0 * .1) : g.rect(x - S0 * .17, y - S0 * .8, S0 * .34, S0 * .42); g.fill();
+  g.strokeStyle = '#f1c27d'; g.lineWidth = S0 * .09; for (const d of [-1, 1]) { g.beginPath(); g.moveTo(x + d * S0 * .15, y - S0 * .72); g.lineTo(x + d * S0 * .27 - d * sw * S0 * .1, y - S0 * .5 + (run ? -d * sw * S0 * .1 : 0)); g.stroke(); }
+  g.fillStyle = '#f1c27d'; g.beginPath(); g.arc(x, y - S0 * .93, S0 * .16, 0, 7); g.fill();
+  g.fillStyle = '#2b2118'; g.beginPath(); g.arc(x, y - S0 * .98, S0 * .165, Math.PI, 0); g.fill();
+  if (RN.phase === 'dying' || RN.phase === 'dead') { flame(g, x, y, S0 * .7, S0 * 1.1, RN.t, 3); flame(g, x - 10, y - S0 * .3, S0 * .5, S0 * .8, RN.t + 1, 5); }
+}
+
+/* ---- دروازه (HTML) ---- */
+function rnGate() {
+  const el = $('#rnGate'); if (!el) return; const q = RN.q;
+  if (!q || RN.phase === 'bonus' || RN.phase === 'idle' || RN.phase === 'win') { el.innerHTML = ''; return; }
+  el.innerHTML = q.o.cards.map((t, i) => `<div class="rn-card${q.over === 'burn' && i !== q.o.correct ? ' burn' : ''}${q.over === 'ok' && i === q.o.correct ? ' pass' : ''}"><span>${esc(t)}</span></div>`).join('');
+  rnPlaceGate();
+}
+function rnPlaceGate() {
+  const el = $('#rnGate'), q = RN.q; if (!el || !q || !RN.W) return; const o = geo(), p = q.p, s = o.sc(p);
+  [...el.children].forEach((d, i) => { d.style.width = (o.lw * .94) + 'px'; d.style.left = o.x(i, p) + 'px'; d.style.top = (o.y(p) - 8 * s) + 'px'; d.style.transform = `translate(-50%,-100%) scale(${s.toFixed(3)})`; });
+}
+function rnPopup(t) { const m = $('#rnMsg'); if (!m) return; m.textContent = t; m.classList.remove('go'); void m.offsetWidth; m.classList.add('go'); }
+function rnHud() {
+  const a = $('#rnSc'), b = $('#rnCo'), c = $('#rnSu'); if (!a) return;
+  a.textContent = 'امتیاز ' + fa(RN.score); b.textContent = '🪙 ' + fa(RN.coins);
+  const e = RN.ev[Math.min(RN.ei, RN.ev.length - 1)]; c.textContent = e ? 'سورهٔ ' + byId[e.s].fa : '';
+}
+function rnOverlay() {
+  const ov = $('#rnOv'); if (!ov) return; const ph = RN.phase, p = P();
+  if (ph === 'run' || ph === 'bonus' || ph === 'dying') { ov.innerHTML = ''; ov.hidden = true; return; }
+  ov.hidden = false;
+  if (ph === 'idle') {
+    const segs = runPlan(), na = segs.reduce((s, g) => s + g.n, 0);
+    ov.innerHTML = `<div class="rn-panel"><div class="big-emoji">🏃</div><h1>دونده</h1>
+      <p class="muted" style="margin:6px 0 10px">${fa(segs.length)} سوره، ${fa(na)} آیه در مسیر تو هست. اول «بسم‌الله» را انتخاب کن؛ هر بار آیهٔ درستِ بعدی راه را باز می‌کند و بقیه آتش‌اند!</p>
+      <div class="muted" style="font-weight:700;margin-bottom:6px">سرعت</div><div class="row" style="justify-content:center;margin-bottom:12px">${RN_PACE.map((x, i) => `<button class="btn ${rnPace() === x ? '' : 'ghost'} small" data-act="rnPace" data-i="${i}">${x.n}</button>`).join('')}</div>
+      ${p.rb ? `<p class="muted">🏆 بهترین امتیاز: ${fa(p.rb)}</p>` : ''}
+      <button class="btn gold" data-act="rnStart">شروع</button></div>`;
+    return;
+  }
+  const win = ph === 'win';
+  ov.innerHTML = `<div class="rn-panel"><div class="big-emoji">${win ? '🏆' : '🔥'}</div><h1>${win ? 'به آخر مسیر رسیدی!' : 'سوختی! اشکالی ندارد'}</h1>
+    <div class="stat-grid" style="margin:12px 0"><div><b>${fa(RN.score)}</b><span>امتیاز</span></div><div><b>${fa(RN.ayahs)}</b><span>آیه</span></div><div><b>${fa(RN.coins)}</b><span>سکه</span></div></div>
+    ${RN.newBest ? '<p><b>🏆 رکورد تازه!</b></p>' : p.rb ? `<p class="muted">بهترین امتیاز: ${fa(p.rb)}</p>` : ''}
+    ${RN.stars ? `<p class="muted">+${fa(RN.stars)} ستاره ⭐ برای سوره‌های کامل</p>` : ''}
+    <div class="stack"><button class="btn gold" data-act="rnAgain">دوباره 🔁</button><button class="btn ghost" data-act="go" data-to="games">بازی‌ها</button></div></div>`;
+}
+
+/* ---- حلقهٔ بازی و نمایش ---- */
+function rnFrame(now) {
+  if (R().name !== 'run') { RN.loop = false; RN.phase = 'idle'; stopAudio(); return; }
+  const cv = $('#rncv'); if (!cv) { RN.loop = false; return; }
+  if (cv !== RN.cv) { RN.cv = cv; rnSize(); }
+  const dt = Math.min(.05, (now - (RN.last || now)) / 1000); RN.last = now;
+  rnUpdate(dt); rnDraw(); requestAnimationFrame(rnFrame);
+}
+VIEW.run = () => `<div class="rn" id="rn">
+  <div class="rn-top"><button class="x" data-act="rnQuit" aria-label="خروج">✕</button><b id="rnSc"></b><b id="rnCo"></b><span id="rnSu" class="muted"></span></div>
+  <div class="rn-stage" id="rnStage"><canvas id="rncv" aria-label="صحنهٔ بازی دونده"></canvas><div id="rnGate" aria-live="polite"></div><div id="rnMsg" class="rn-msg" aria-hidden="true"></div><div id="rnOv" class="rn-ov" hidden></div></div>
+  <div class="rn-ctl"><button class="btn water" data-act="rnL" aria-label="مسیر چپ">‹ چپ</button><button class="btn water" data-act="rnR" aria-label="مسیر راست">راست ›</button></div></div>`;
+VIEW.run_after = () => {
+  if (!runPlan().length) { go('games'); return; }
+  RN.cv = $('#rncv'); rnSize();
+  if (RN.phase === 'run' || RN.phase === 'bonus' || RN.phase === 'dying') rnGate(); else if (RN.phase !== 'dead' && RN.phase !== 'win') RN.phase = 'idle';
+  rnHud(); rnOverlay();
+  if (!RN.loop) { RN.loop = true; RN.last = 0; requestAnimationFrame(rnFrame); }
+  const st = $('#rnStage'); let x0 = null;
+  st.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; x0 = e.clientX; });
+  st.addEventListener('pointerup', e => {
+    if (x0 == null) return; const dx = e.clientX - x0, r = st.getBoundingClientRect(); x0 = null;
+    if (Math.abs(dx) > 40) rnMove(dx > 0 ? 1 : -1); else rnLaneAt((e.clientX - r.left) / r.width);
+  });
+};
+const rnMove = d => { if (RN.phase === 'run' || RN.phase === 'bonus') RN.lane = Math.min(2, Math.max(0, RN.lane + d)); };
+const rnLaneAt = fx => { if (RN.phase === 'run' || RN.phase === 'bonus') RN.lane = fx < .36 ? 0 : fx > .64 ? 2 : 1; };
+window.addEventListener('keydown', e => { if (R().name !== 'run') return; if (e.key === 'ArrowLeft') rnMove(-1); if (e.key === 'ArrowRight') rnMove(1); });
+window.addEventListener('resize', () => { if (R().name === 'run') rnSize(); });
 
 /* ============ حالت آزمایشی والدین ============
    یک پروفایل موقت فقط در حافظه است؛ هیچ‌چیز از آن در S.profiles یا localStorage نمی‌نشیند.
@@ -1241,9 +1485,9 @@ const head = async u => { try { const r = await fetch(u, { method: 'HEAD', cache
 async function findAudio() {                       // فایل‌های صوتی‌ای که روی همین سایت هست
   try {
     const r = await fetch('audio/timings.json', { cache: 'no-store' });
-    if (r.ok) { const t = await r.json(), urls = ['audio/timings.json']; for (const s of Object.keys(t)) if (byId[s]) urls.push(suUrl(+s)); return urls; }
+    if (r.ok) { const t = await r.json(), urls = ['audio/timings.json']; for (const s of Object.keys(t)) if (byId[s]) urls.push(suUrl(+s)); if (await head(ayUrl(1, 1))) urls.push(ayUrl(1, 1)); return urls; }
   } catch (e) { }
-  const jobs = [], urls = []; SUR.forEach(s => { for (let a = 1; a <= s.v.length; a++) jobs.push(ayUrl(s.id, a)); });
+  const jobs = [], urls = []; SUR.forEach(s => { for (let a = 1; a <= s.v.length; a++) jobs.push(ayUrl(s.id, a)); }); jobs.push(ayUrl(1, 1));
   await runPool(jobs, 12, async u => { if (await head(u)) urls.push(u); });
   return urls;
 }
@@ -1333,7 +1577,7 @@ function cleanProfile(p) {
   const q = { id: String(p.id || uid()).replace(/[^\w-]/g, ''), name: String(p.name || 'کودک').slice(0, 20), av: AVATARS.includes(p.av) ? p.av : AVATARS[0],
     ay: {}, days: {}, stars: n(p.stars), streak: { cur: n(p.streak && p.streak.cur), best: n(p.streak && p.streak.best), last: /^\d{4}-\d\d-\d\d$/.test(p.streak && p.streak.last) ? p.streak.last : '' },
     goal: { newPerDay: Math.min(5, Math.max(1, n(p.goal && p.goal.newPerDay) || 2)), revMax: Math.min(20, Math.max(5, n(p.goal && p.goal.revMax) || 10)) },
-    cur: byId[p.cur] ? +p.cur : PATH[0], created: /^\d{4}-\d\d-\d\d$/.test(p.created) ? p.created : today() };
+    rb: Math.max(0, n(p.rb)), cur: byId[p.cur] ? +p.cur : PATH[0], created: /^\d{4}-\d\d-\d\d$/.test(p.created) ? p.created : today() };
   for (const k in (p.ay || {})) {
     const [s, a] = k.split(':').map(Number), x = p.ay[k];
     if (byId[s] && a >= 1 && a <= byId[s].v.length && x && /^\d{4}-\d\d-\d\d$/.test(x.d)) q.ay[k] = { b: Math.min(5, Math.max(1, n(x.b) || 1)), d: x.d, n: n(x.n), l: n(x.l), t: /^\d{4}-\d\d-\d\d$/.test(x.t) ? x.t : x.d };
@@ -1445,6 +1689,14 @@ const A = {
     startSession([{ t: 'rev', s: +el.dataset.s, a: +el.dataset.a, kind: GAMES[g].kind, pr: true, game: g }]);
   },
   finishQ: () => { const c = sess.cur; completeItem(qRes(c.st.wrong)); draw(); },
+
+  /* دونده */
+  runOpen: () => { if (!runPlan().length) { toast('اول آیهٔ اول سورهٔ ناس را بکار'); return; } RN.phase = 'idle'; go('run'); },
+  rnStart: () => rnStart(),
+  rnAgain: () => rnStart(),
+  rnQuit: () => { stopAudio(); RN.atok++; RN.phase = 'idle'; go('games'); },
+  rnL: () => rnMove(-1), rnR: () => rnMove(1),
+  rnPace: el => { S.set.runPace = +el.dataset.i; save(); rnOverlay(); },
 
   /* باغ */
   listenSurah: async el => {
