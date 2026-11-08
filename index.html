@@ -746,10 +746,13 @@ function pickKind(it) {
   if (!opts.length) add('recite', 1);
   return pick(opts);
 }
-function distractWords(target, sid) {
-  const set = new Set(), local = [], all = [];
-  byId[sid].v.forEach(v => v[0].split(' ').forEach(w => { if (w !== target && !set.has(w)) { set.add(w); local.push(w); } }));
-  SUR.forEach(s => s.v.forEach(v => v[0].split(' ').forEach(w => { if (w !== target && !set.has(w)) { set.add(w); all.push(w); } })));
+let _bg = null;
+const BG = () => _bg || (_bg = new Set(SUR.flatMap(s => s.v.flatMap(v => { const t = v[0].split(' '); return t.slice(1).map((x, i) => t[i] + ' ' + x); }))));
+function distractWords(target, sid, ctx) {            // ctx: اگر داده شود، کلمه‌ای که با همسایه‌هایش در جایی از قرآن (این جزء) آمده، «درست» حساب می‌شود و کنار گذاشته می‌شود
+  const set = new Set(), local = [], all = [], bg = BG();
+  const ok = x => !ctx || !((ctx.prev && bg.has(ctx.prev + ' ' + x)) || (ctx.next && bg.has(x + ' ' + ctx.next)));
+  byId[sid].v.forEach(v => v[0].split(' ').forEach(w => { if (w !== target && !set.has(w) && ok(w)) { set.add(w); local.push(w); } }));
+  SUR.forEach(s => s.v.forEach(v => v[0].split(' ').forEach(w => { if (w !== target && !set.has(w) && ok(w)) { set.add(w); all.push(w); } })));
   const rank = arr => shuffle(arr).sort((p, q) => Math.abs(p.length - target.length) - Math.abs(q.length - target.length)).slice(0, 8);
   const pool = local.length >= 4 ? rank(local) : rank(all);
   return shuffle(pool).slice(0, 2);
@@ -793,7 +796,7 @@ function initStep() {
   if (kind === 'recite') st = { revealed: false };
   c.st = st;
 }
-function blankOpts(st, w, it) { const t = w[st.hidden[st.k]]; return shuffle([{ t, ok: true }, ...distractWords(t, it.s).map(x => ({ t: x, ok: false }))]); }
+function blankOpts(st, w, it) { const i = st.hidden[st.k], t = w[i]; return shuffle([{ t, ok: true }, ...distractWords(t, it.s, { prev: w[i - 1], next: w[i + 1] }).map(x => ({ t: x, ok: false }))]); }
 
 const wordSpans = (w, hideSet, hl) => w.map((x, i) => `<span class="w${hideSet.has(i) ? ' hide' : ''}${hl === i ? ' hl' : ''}" data-i="${i}">${esc(x)}</span>`).join(' ');
 function lessonHead() {
@@ -980,10 +983,13 @@ const mistake = () => { if (sess && sess.cur) sess.cur.mist++; };
 const contBtn = '<div style="margin-top:14px"><button class="btn gold" data-act="wNext">ادامه</button></div>';
 const clusters = word => { const cl = []; for (const ch of word) { if (MARKS.test(ch) && cl.length) cl[cl.length - 1] += ch; else cl.push(ch); } return cl; };
 const baseOf = c => c.replace(MARKS, '');
-function firstBits(word) {                       // حرف اول کلمه (برای «ال» تعریف، تا حرف بعد از آن)
+const NOJOIN = new Set('اأإآٱدذرزوؤةىء');
+function firstBits(word) {                       // حرف اول (برای «ال» تا حرف بعد از آن) + کشیده‌ی اتصال، تا بچه بفهمد بقیهٔ کلمه حذف شده
   const cl = clusters(word); let n = 1;
   if ((baseOf(cl[0]) === 'ٱ' || baseOf(cl[0]) === 'ا') && cl[1] && baseOf(cl[1]) === 'ل' && cl.length > 3) n = 3;
-  return cl.slice(0, n).join('') + '…';
+  if (n >= cl.length) return word;
+  const head = cl.slice(0, n).join(''), last = baseOf(cl[n - 1]).slice(-1);
+  return head + (NOJOIN.has(last) ? '…' : 'ـ…');
 }
 
 /* مسیر یادگیری آیهٔ جدید: چند دور جای خالی با کلمه‌های متفاوت، پازل، چیدن، محو تدریجی، اشتباه‌یاب، حرف اول و در پایان از حفظ */
@@ -1042,10 +1048,15 @@ WG.bubbles = {
 /* ---- اشتباه‌یاب ---- */
 WG.spot = {
   init: it => {
-    const w = words(it.s, it.a), pairs = [...Array(Math.max(0, w.length - 1)).keys()].filter(i => w[i] !== w[i + 1]);
-    let w2 = w.slice(), bad = [], type = 'sub';
-    if (pairs.length && (w.length >= 4 && Math.random() < .4)) { const i = pick(pairs); [w2[i], w2[i + 1]] = [w2[i + 1], w2[i]]; bad = [i, i + 1]; type = 'swap'; }
-    else { const i = Math.random() * w.length | 0, d = distractWords(w[i], it.s)[0]; if (d) { w2[i] = d; bad = [i]; } else if (pairs.length) { const j = pick(pairs); [w2[j], w2[j + 1]] = [w2[j + 1], w2[j]]; bad = [j, j + 1]; type = 'swap'; } }
+    const w = words(it.s, it.a), n = w.length; let w2 = w.slice(), bad = [], type = 'sub';
+    for (const i of shuffle([...w.keys()])) {                         // جایگزینی: فقط کلمه‌ای که با همسایه‌هایش در هیچ آیه‌ای نیامده باشد
+      const d = distractWords(w[i], it.s, { prev: w[i - 1], next: w[i + 1] })[0];
+      if (d) { w2[i] = d; bad = [i]; break; }
+    }
+    if (!bad.length) for (const i of shuffle([...Array(Math.max(0, n - 1)).keys()])) {   // جابه‌جایی دو کلمه، اگر ترتیب جدید هم‌جایی معتبر نباشد
+      if (w[i] === w[i + 1]) continue; const t = w.slice(); [t[i], t[i + 1]] = [t[i + 1], t[i]];
+      if (![[t[i - 1], t[i]], [t[i], t[i + 1]], [t[i + 1], t[i + 2]]].some(p => p[0] != null && p[1] != null && BG().has(p[0] + ' ' + p[1]))) { w2 = t; bad = [i, i + 1]; type = 'swap'; break; }
+    }
     return { w2, bad, type, wrong: 0, found: false, tip: false };
   },
   html: (it, st) => {
