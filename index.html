@@ -248,6 +248,44 @@ a{color:var(--leaf-d);font-weight:700}
 body.demo #app{padding-top:38px}
 select{font:inherit;width:100%;padding:10px 12px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink)}
 
+/* جلوگیری از نشت المان‌های باغ روی پنجره‌ها و نوار آزمایشی */
+.scene,.garden.wild,.farm{isolation:isolate}
+main{position:relative;z-index:0}
+
+/* تمرین‌ها و بازی‌ها */
+.ayah .w.tap{cursor:pointer}.ayah .w.tap.no{background:#fde4e2;animation:shake .35s}
+.ayah .w.tip{outline:3px dashed var(--gold);outline-offset:2px}
+.ayah .w.good{background:#dff5e7}
+.ayah .w.hint{color:var(--leaf-d);cursor:pointer;background:#eef8f2}
+.pz-board{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0;direction:rtl}
+.pz-slot{min-width:84px;min-height:58px;padding:2px 12px;border-radius:16px;border:3px dashed var(--line);background:#fff;font-family:var(--quran);font-size:calc(1.6rem*var(--fs));line-height:2;color:var(--muted);direction:rtl}
+.pz-slot.full{border:3px solid #7cc79b;background:#e9f8ef;color:var(--ink,#16324f)}
+.pz-slot.no,.pz-piece.no{animation:shake .35s;background:#fde4e2}
+.pz-bank{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;direction:rtl}
+.pz-piece{padding:2px 14px;border-radius:16px;background:hsl(var(--h),70%,92%);box-shadow:0 0 0 2px hsl(var(--h),50%,70%),0 4px 0 hsl(var(--h),50%,70%);font-family:var(--quran);font-size:calc(1.6rem*var(--fs));line-height:2;direction:rtl;touch-action:none}
+.pz-piece.sel{transform:translateY(-3px) scale(1.05);box-shadow:0 0 0 3px var(--gold),0 6px 0 var(--gold)}
+.pz-piece.drag{position:fixed;z-index:70;pointer-events:none;opacity:.92;transform:scale(1.08)}
+.built{min-height:56px;text-align:center;padding:8px}
+.bubbles{position:relative;height:300px;margin-top:10px;border-radius:24px;background:linear-gradient(#e3f6fb,#f3fbf7);overflow:hidden}
+.bubble{position:absolute;transform:translate(-50%,-50%);min-width:84px;min-height:84px;max-width:44%;padding:8px 14px;border-radius:50%;background:radial-gradient(circle at 30% 28%,#fff 0 12%,hsla(var(--h),80%,85%,.9) 13%,hsla(var(--h),70%,72%,.85));box-shadow:inset 0 0 0 2px hsla(var(--h),60%,55%,.5);font-family:var(--quran);font-size:calc(1.5rem*var(--fs));line-height:1.6;animation:bob var(--dur) ease-in-out infinite}
+.bubble.pop{animation:none;transform:translate(-50%,-50%) scale(1.5);opacity:0;transition:.18s}
+.bubble.no{box-shadow:inset 0 0 0 3px #e0574f}
+@keyframes bob{50%{margin-top:-9px}}
+.mem{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+.mc{min-height:76px;padding:6px 10px;border-radius:16px;background:#d9f0e2;font-size:1.6rem;box-shadow:0 4px 0 #a9d6bb}
+.mc.up{background:#fff;font-family:var(--quran);font-size:calc(1.35rem*var(--fs));line-height:1.9;box-shadow:0 0 0 2px var(--line);direction:rtl}
+.mc.match{background:#e9f8ef;box-shadow:0 0 0 2px #7cc79b}
+.seq-slots,.seq-bank{display:grid;gap:8px;margin:10px 0}
+.seq-slot{display:flex;gap:10px;align-items:center;min-height:52px;padding:6px 12px;border-radius:14px;border:3px dashed var(--line);background:#fff}
+.seq-slot.full{border:3px solid #7cc79b;background:#e9f8ef}
+.seq-slot b{color:var(--muted)}.seq-slot span{font-family:var(--quran);font-size:calc(1.35rem*var(--fs));line-height:1.9;direction:rtl}
+.seq-card{padding:8px 14px;border-radius:14px;background:#fff;box-shadow:0 0 0 2px var(--line),0 4px 0 var(--line);font-family:var(--quran);font-size:calc(1.35rem*var(--fs));line-height:1.9;direction:rtl;text-align:right}
+.seq-card.no{animation:shake .35s;background:#fde4e2}
+.gcard{display:flex;align-items:center;gap:14px;width:100%;padding:14px;margin:0 0 12px;border-radius:22px;text-align:start;background:hsl(var(--gh),70%,95%);box-shadow:0 0 0 2px hsl(var(--gh),55%,80%),0 5px 0 hsl(var(--gh),50%,78%)}
+.gcard:disabled{opacity:.55;filter:grayscale(.5)}
+.gcard .gem{font-size:2.3rem}.gcard .gtx{flex:1;display:grid}.gcard small{color:var(--muted);font-weight:500}.gcard .go{font-size:1.8rem;color:var(--muted)}
+.sidegames{display:grid;gap:6px}.sidegames .row{flex-wrap:wrap}
+
 [hidden]{display:none!important}
 </style>
 </head>
@@ -500,6 +538,7 @@ const IC = {
   sun: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="#f7a531"/><g stroke="#f7a531" stroke-width="2" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></g></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>',
   garden: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V11"/><path d="M12 15c-4 0-6-2-6-5 4 0 6 2 6 5zM12 13c0-3 2-5 6-5 0 3-2 5-6 5z"/><circle cx="12" cy="6" r="3"/></svg>',
+  games: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7h8a5 5 0 015 5v1a3 3 0 01-5.4 1.8L14.5 13h-5l-1.1 1.8A3 3 0 013 13v-1a5 5 0 015-5z"/><path d="M8 10v3M6.5 11.5h3"/><circle cx="15.5" cy="10.5" r=".8" fill="currentColor"/><circle cx="17.5" cy="12" r=".8" fill="currentColor"/></svg>',
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>'
 };
 const R = () => { const h = location.hash.replace(/^#\/?/, ''); const [name, ...arg] = h.split('/'); return { name: name || 'home', arg }; };
@@ -520,9 +559,9 @@ function draw() {
     const p = P();
     top.innerHTML = `<button class="who" data-act="go" data-to="who" aria-label="تغییر کودک"><span class="av">${p.av}</span>${esc(p.name)}</button>
       <div class="stats"><span class="pill" title="ستاره‌ها">${IC.star}${fa(p.stars)}</span><span class="pill" title="روزهای پشت‌سرهم">${IC.sun}${fa(streakNow())}</span></div>`;
-    const cur = v === 'home' ? 'home' : (v === 'garden' || v === 's') ? 'garden' : (v === 'parents' || v === 'downloads') ? 'parents' : '';
+    const cur = v === 'home' ? 'home' : (v === 'garden' || v === 's') ? 'garden' : v === 'games' ? 'games' : (v === 'parents' || v === 'downloads') ? 'parents' : '';
     const tab = (id, ic, t) => `<button data-act="go" data-to="${id === 'home' ? '' : id}" ${cur === id ? 'aria-current="page"' : ''}>${IC[ic]}${t}</button>`;
-    nav.innerHTML = `<div class="in">${tab('home', 'home', 'امروز')}${tab('garden', 'garden', 'باغ من')}${tab('parents', 'lock', 'والدین')}</div>`;
+    nav.innerHTML = `<div class="in">${tab('home', 'home', 'امروز')}${tab('garden', 'garden', 'باغ من')}${tab('games', 'games', 'بازی‌ها')}${tab('parents', 'lock', 'والدین')}</div>`;
     nav.hidden = false; top.hidden = false;
   } else { top.innerHTML = ''; nav.innerHTML = ''; nav.hidden = true; top.hidden = true; }
   $('#main').innerHTML = (VIEW[v] || VIEW.home)(arg);
@@ -658,7 +697,8 @@ function sheet(s, a) {
   openModal(`<div class="stack"><div class="muted" style="text-align:center;font-weight:700">سورهٔ ${byId[s].fa} · آیهٔ ${fa(a)}</div>
     <div class="ayah" data-ayimg="${s}:${a}">${esc(v[0])}</div><div class="meaning">${esc(v[1])}</div>
     <button class="btn water" data-act="hear" data-s="${s}" data-a="${a}">🔊 بشنو</button>
-    ${st ? `<button class="btn" data-act="practiceOne" data-s="${s}" data-a="${a}">تمرین این آیه</button>` : `<button class="btn" data-act="learnFrom" data-s="${s}" data-a="${a}">یاد بگیر و بکار</button>`}
+    ${st ? `<button class="btn" data-act="practiceOne" data-s="${s}" data-a="${a}">تمرین این آیه</button>
+      <div class="sidegames"><span class="muted">بازی با این آیه:</span><div class="row">${[['puzzle', 3], ['bubbles', 2], ['spot', 2], ['listen', 1]].filter(([g, n]) => words(s, a).length >= n).map(([g]) => `<button class="btn ghost small" data-act="sideGame" data-g="${g}" data-s="${s}" data-a="${a}">${GAMES[g].emoji} ${GAMES[g].name}</button>`).join('')}</div></div>` : `<button class="btn" data-act="learnFrom" data-s="${s}" data-a="${a}">یاد بگیر و بکار</button>`}
     <button class="btn ghost" data-act="close">بستن</button></div>`);
 }
 
@@ -698,6 +738,11 @@ function pickKind(it) {
   else if (b === 2) { canOrder && add('order', 4); canBlank && add('blank', 3); hasNext && add('next', 3); }
   else if (b === 3) { hasNext && add('next', 4); canOrder && add('order', 3); add('recite', 3); }
   else { add('recite', 5); hasNext && add('next', 3); canOrder && add('order', 2); }
+  const nw = w.length, fx = (k, n, ok) => ok && add(k, n);
+  if (b <= 1) { fx('puzzle', 3, nw >= 3); fx('fade', 2, nw >= 2); }
+  else if (b === 2) { fx('puzzle', 2, nw >= 3); fx('spot', 2, nw >= 2); fx('letters', 2, nw >= 2); }
+  else if (b === 3) { fx('spot', 2, nw >= 2); fx('letters', 3, nw >= 2); }
+  else { fx('letters', 2, nw >= 2); fx('spot', 1, nw >= 2); }
   if (!opts.length) add('recite', 1);
   return pick(opts);
 }
@@ -720,17 +765,23 @@ function beginItem() {
   const it = sess.q[sess.i]; if (!it) { sess.cur = null; return; }
   const w = words(it.s, it.a);
   let steps;
-  if (it.t === 'new') { steps = ['listen']; if (w.length >= 2) steps.push('blank'); if (unitsOf(w).length >= 3) steps.push('order'); steps.push('recite'); }
+  if (it.t === 'new') steps = lessonSteps(w);
   else steps = [it.kind || pickKind(it)];
-  sess.cur = { it, steps, si: 0, mist: 0, st: null, done: false, res: null };
+  sess.cur = { it, steps, si: 0, mist: 0, st: null, done: false, res: null, used: new Set(), bn: 0 };
   initStep();
 }
 function initStep() {
   const c = sess.cur, it = c.it, kind = c.steps[c.si], w = words(it.s, it.a); let st = {};
   if (kind === 'listen') st = { n: S.set.repeats, done: 0, playing: false, noAudio: false, blocked: false, run: 0, meaning: false };
+  if (c.si === 0 && kind === 'listen') { c.used = new Set(); c.bn = 0; }
+  if (WG[kind]) st = WG[kind].init(it);
   if (kind === 'blank') {
-    const k = w.length <= 3 ? 1 : w.length <= 8 ? 2 : 3;
-    const hidden = shuffle([...w.keys()]).slice(0, Math.min(k, w.length)).sort((a, b) => a - b);
+    const n = w.length, r = c.bn++;
+    let k = n <= 3 ? 1 : n <= 8 ? 2 : 3;
+    if (it.t === 'new') k = r === 0 ? (n <= 3 ? 1 : 2) : r === 1 ? Math.ceil(n / 2) : Math.min(6, Math.max(3, Math.ceil(n * .75)));
+    k = Math.max(1, Math.min(k, n, 6));
+    const fresh = shuffle([...w.keys()].filter(i => !c.used.has(i))), rest = shuffle([...w.keys()].filter(i => c.used.has(i)));
+    const hidden = [...fresh, ...rest].slice(0, k).sort((a, b) => a - b); hidden.forEach(i => c.used.add(i));
     st = { hidden, k: 0, wrong: 0 }; st.opts = blankOpts(st, w, it);
   }
   if (kind === 'order') {
@@ -748,9 +799,10 @@ const wordSpans = (w, hideSet, hl) => w.map((x, i) => `<span class="w${hideSet.h
 function lessonHead() {
   const c = sess.cur, n = sess.q.length;
   const bars = sess.q.map((_, i) => `<i class="${i < sess.i ? 'done' : i === sess.i ? 'on' : ''}"></i>`).join('');
-  return `<div class="qhead"><span>${c && c.it.t === 'new' ? '🌱 آیهٔ جدید' : '💧 مرور'} · ${fa(Math.min(sess.i + 1, n))} از ${fa(n)}</span><button class="x" data-act="quit" aria-label="خروج">✕</button></div><div class="steps" aria-hidden="true">${bars}</div>`;
+  const g = n && sess.q[0].game, lab = g ? `${GAMES[g].emoji} ${GAMES[g].name}` : c && c.it.t === 'new' ? '🌱 آیهٔ جدید' : '💧 مرور';
+  return `<div class="qhead"><span>${lab} · ${fa(Math.min(sess.i + 1, n))} از ${fa(n)}</span><button class="x" data-act="quit" aria-label="خروج">✕</button></div><div class="steps" aria-hidden="true">${bars}</div>`;
 }
-const where = it => `<div class="muted" style="text-align:center;font-weight:700">سورهٔ ${esc(byId[it.s].fa)} · آیهٔ ${fa(it.a)}</div>`;
+const where = it => `<div class="muted" style="text-align:center;font-weight:700">سورهٔ ${esc(byId[it.s].fa)}${it.multi ? '' : ' · آیهٔ ' + fa(it.a)}</div>`;
 VIEW.lesson = () => {
   if (sess.i >= sess.q.length) return lessonEnd();
   const c = sess.cur, it = c.it, kind = c.steps[c.si], st = c.st, w = words(it.s, it.a);
@@ -788,21 +840,24 @@ VIEW.lesson = () => {
       <div class="opts">${st.opts.map((o, i) => `<button class="opt ${o.cls || ''}" data-act="nPick" data-i="${i}">${esc(o.t)}</button>`).join('')}</div>
       ${st.solved ? '<div style="margin-top:14px"><button class="btn gold" data-act="finishQ">ادامه</button></div>' : ''}`;
   }
+  if (WG[kind]) h += WG[kind].html(it, st, c);
   if (kind === 'recite') {
     const isNew = it.t === 'new';
     h += `<p class="prompt">${isNew ? 'حالا از حفظ بخوان!' : 'این آیه را از حفظ بخوان'}</p>
       <div class="ayah big" id="rec">${st.revealed ? wordSpans(w, new Set()) : wordSpans(w, new Set(w.keys()))}</div>
-      ${st.revealed ? `<p class="prompt" style="margin-top:10px">${isNew ? 'درست خواندی؟' : 'خواندنت چطور بود؟'}</p>
-        <div class="rate">${isNew ? `<button class="btn" data-act="rate" data-r="good">درست خواندم ✅</button><button class="btn ghost" data-act="rate" data-r="again">دوباره تمرین می‌کنم 🔁</button>` :
-          `<button class="btn" data-act="rate" data-r="good">خوب بود ✅</button><button class="btn ghost" data-act="rate" data-r="ok">کمی فراموش کردم 🤔</button><button class="btn ghost" data-act="rate" data-r="bad">یادم نبود</button>`}
-        <button class="btn water small" data-act="hear" data-s="${it.s}" data-a="${it.a}" style="align-self:center">🔊 بشنو</button></div>` :
+      ${st.revealed ? rateButtons(it, c) :
         `<div class="stack" style="margin-top:14px"><button class="btn gold" data-act="reveal">نشانم بده</button><p class="muted" style="text-align:center;margin:0">روی جای خالی بزنی، همان کلمه باز می‌شود.</p></div>`}`;
   }
   return h;
 };
 function feedback() {
   const c = sess.cur, it = c.it, r = c.res;
-  const isNew = it.t === 'new';
+  const isNew = it.t === 'new', g = it.game;
+  if (g) {
+    const good = r === 'good';
+    return `<div class="card empty" style="margin-top:14px"><div class="big-emoji">${good ? '🎉' : '👏'}</div><h1 style="font-size:1.3rem">${good ? 'عالی بود! بدون اشتباه' : 'آفرین! تمامش کردی'}</h1>${good ? '<p class="muted">+۱ ستاره ⭐</p>' : '<p class="muted">دفعهٔ بعد بدون اشتباه هم می‌شود</p>'}
+      <div style="margin-top:12px"><button class="btn" data-act="nextItem">${sess.i + 1 >= sess.q.length ? 'تمام' : 'دور بعد'}</button></div></div>`;
+  }
   const emoji = isNew ? '🌱' : r === 'good' ? '🌸' : r === 'ok' ? '🌿' : '💧';
   const msg = isNew ? `آیهٔ ${fa(it.a)} کاشته شد!` : r === 'good' ? 'آفرین! گیاهت بزرگ‌تر شد' : r === 'ok' ? 'خوب بود! دوباره هم مرورش می‌کنیم' : 'اشکالی ندارد! به این گیاه آب بیشتر می‌دهیم';
   const sub = isNew ? `<div class="garden" style="padding:6px">${plantEl(it.s, it.a, 76, true)}</div><p class="muted">+۳ ستاره ⭐ · فردا دوباره مرورش می‌کنیم</p>` : r === 'good' ? '<p class="muted">+۱ ستاره ⭐</p>' : '';
@@ -811,7 +866,10 @@ function feedback() {
     <div style="margin-top:12px"><button class="btn" data-act="nextItem">${sess.i + 1 >= sess.q.length ? 'تمام' : 'بعدی'}</button></div></div>`;
 }
 function lessonEnd() {
-  const p = P(), rec = p.days[today()] || {};
+  const p = P(), rec = p.days[today()] || {}, g = sess.q[0] && sess.q[0].game;
+  if (g) return `<div class="card empty" style="margin-top:24px"><div class="big-emoji">${GAMES[g].emoji}</div><h1>آفرین ${esc(p.name)}!</h1>
+    <div class="stat-grid" style="margin:14px 0"><div><b>${fa(sess.stars)}</b><span>ستارهٔ بازی</span></div><div><b>${fa(sess.q.length)}</b><span>دور بازی</span></div></div>
+    <div class="stack" style="margin-top:12px"><button class="btn gold" data-act="gameAgain">یک بار دیگر 🔁</button><button class="btn" data-act="endSess" data-to="games">بازی‌های دیگر</button><button class="btn ghost" data-act="endSess" data-to="">صفحهٔ اصلی</button></div></div>`;
   return `<div class="card empty" style="margin-top:24px"><div class="big-emoji">🌟</div><h1>آفرین ${esc(p.name)}!</h1>
     <div class="stat-grid" style="margin:14px 0"><div><b>${fa(sess.stars)}</b><span>ستارهٔ تازه</span></div><div><b>${fa(sess.newN.length)}</b><span>آیهٔ کاشته‌شده</span></div><div><b>${fa(sess.rev)}</b><span>آیهٔ مرورشده</span></div></div>
     ${rec.star ? '<p><b>🌟 ستارهٔ امروز را گرفتی!</b></p>' : ''}
@@ -823,6 +881,9 @@ function completeItem(res) {
   if (it.t === 'new') {
     plantNew(it.s, it.a); addStars(3); sess.stars += 3; sess.newN.push(it); dayRec().nw++;
     if (surahStats(it.s).done) { sess.surahDone = it.s; celebrate(70); chime('big'); } else { celebrate(14); chime(); }
+  } else if (it.game) {
+    if (res === 'good') { addStars(1); sess.stars++; sess.good++; chime('big'); } else chime();
+    touchDay();
   } else if (!it.pr && !it.retry) {
     grade(it.s, it.a, res); touchDay(); dayRec().rv++; sess.rev++;
     if (res === 'good') { addStars(1); sess.stars++; sess.good++; chime(); } else chime('bad');
@@ -909,6 +970,206 @@ function editKid(id) {
 async function runPool(jobs, n, fn, onTick) { let i = 0, done = 0; await Promise.all([...Array(n)].map(async () => { while (i < jobs.length) { const j = jobs[i++]; await fn(j); onTick && onTick(++done, jobs.length); } })); }
 function exportBackup() { const blob = new Blob([JSON.stringify(S)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `baghe-hifz-${today()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
 
+/* ============ تمرین‌ها و بازی‌های آیه ============
+   هر «ابزار» (WG) هم مرحلهٔ درس آیهٔ جدید است، هم مرور، هم یک بازی مستقل در بخش «بازی‌ها».
+   حالت بازی همان موتور درس را به کار می‌گیرد: sess.game پر است و ستارهٔ بازی جدا حساب می‌شود (جعبهٔ لایتنر دست نمی‌خورد). */
+const MARKS = /[ً-ٰٟۖ-ۭـ]/;
+const cutUnits = (w, n) => { const out = [], z = w.length / n; for (let i = 0; i < n; i++) out.push(w.slice(Math.round(i * z), Math.round((i + 1) * z)).join(' ')); return out.filter(Boolean); };
+const shufNot = a => { let b = shuffle(a); for (let t = 0; t < 8 && b.every((v, i) => v === a[i]); t++) b = shuffle(a); return b; };
+const mistake = () => { if (sess && sess.cur) sess.cur.mist++; };
+const contBtn = '<div style="margin-top:14px"><button class="btn gold" data-act="wNext">ادامه</button></div>';
+const clusters = word => { const cl = []; for (const ch of word) { if (MARKS.test(ch) && cl.length) cl[cl.length - 1] += ch; else cl.push(ch); } return cl; };
+const baseOf = c => c.replace(MARKS, '');
+function firstBits(word) {                       // حرف اول کلمه (برای «ال» تعریف، تا حرف بعد از آن)
+  const cl = clusters(word); let n = 1;
+  if ((baseOf(cl[0]) === 'ٱ' || baseOf(cl[0]) === 'ا') && cl[1] && baseOf(cl[1]) === 'ل' && cl.length > 3) n = 3;
+  return cl.slice(0, n).join('') + '…';
+}
+
+/* مسیر یادگیری آیهٔ جدید: چند دور جای خالی با کلمه‌های متفاوت، پازل، چیدن، محو تدریجی، اشتباه‌یاب، حرف اول و در پایان از حفظ */
+function lessonSteps(w) {
+  const n = w.length;
+  if (n <= 3) return ['listen', 'blank', ...(n >= 3 ? ['puzzle'] : []), 'fade', 'letters', 'blank', 'recite'];
+  if (n <= 8) return ['listen', 'blank', 'puzzle', 'blank', 'order', 'fade', 'spot', 'letters', 'blank', 'recite'];
+  return ['listen', 'blank', 'puzzle', 'blank', 'fade', 'order', 'spot', 'letters', 'blank', 'recite'];
+}
+
+const rateButtons = (it, c) => {
+  const isNew = it.t === 'new', last = c.si === c.steps.length - 1;
+  return `<p class="prompt" style="margin-top:10px">${isNew && !last ? 'درست خواندی؟' : 'خواندنت چطور بود؟'}</p>
+    <div class="rate">${isNew ? `<button class="btn" data-act="rate" data-r="good">درست خواندم ✅</button><button class="btn ghost" data-act="rate" data-r="again">دوباره تمرین می‌کنم 🔁</button>`
+      : `<button class="btn" data-act="rate" data-r="good">خوب بود ✅</button><button class="btn ghost" data-act="rate" data-r="ok">کمی فراموش کردم 🤔</button><button class="btn ghost" data-act="rate" data-r="bad">یادم نبود</button>`}
+      <button class="btn water small" data-act="hear" data-s="${it.s}" data-a="${it.a}" style="align-self:center">🔊 بشنو</button></div>`;
+};
+
+const WG = {};
+
+/* ---- پازل ---- */
+const puzzleUnits = w => cutUnits(w, Math.min(6, Math.max(3, Math.ceil(w.length / 2))));
+WG.puzzle = {
+  init: it => { const u = puzzleUnits(words(it.s, it.a)); return { u, slots: u.map(() => null), bank: shufNot(u.map((_, i) => i)), sel: null }; },
+  html: (it, st) => {
+    const solved = st.slots.every(x => x != null), rem = st.bank.filter(i => !st.slots.includes(i));
+    return `<p class="prompt">${solved ? 'آفرین! پازل کامل شد. حالا آیه را بلند بخوان' : 'پازل را کامل کن: تکه‌ها را بکش یا بزن و جای درستشان بگذار'}</p>
+      <div class="pz-board">${st.u.map((t, i) => st.slots[i] != null ? `<div class="pz-slot full" data-slot="${i}">${esc(st.u[st.slots[i]])}</div>`
+        : `<button class="pz-slot" data-act="pzSlot" data-slot="${i}" aria-label="جای ${fa(i + 1)}"><b>${fa(i + 1)}</b></button>`).join('')}</div>
+      ${solved ? contBtn : `<div class="pz-bank">${rem.map(i => `<button class="pz-piece${st.sel === i ? ' sel' : ''}" style="--h:${(i * 53 + 190) % 360}" data-act="pzPick" data-pc="${i}">${esc(st.u[i])}</button>`).join('')}</div>`}`;
+  }
+};
+function pzPlace(pc, slot) {
+  const c = sess && sess.cur; if (!c || c.steps[c.si] !== 'puzzle') return; const st = c.st;
+  if (st.slots[slot] != null || st.slots.includes(pc)) return;
+  if (st.u[pc] === st.u[slot]) { st.slots[slot] = pc; st.sel = null; chime(); draw(); }
+  else { c.mist++; chime('bad'); const el = document.querySelector(`.pz-piece[data-pc="${pc}"]`), sl = document.querySelector(`.pz-slot[data-slot="${slot}"]`); [el, sl].forEach(x => { if (x) { x.classList.add('no'); setTimeout(() => x.classList.remove('no'), 450); } }); }
+}
+
+/* ---- حباب کلمه ---- */
+WG.bubbles = {
+  init: it => {
+    const w = words(it.s, it.a), u = w.length <= 8 ? w.slice() : cutUnits(w, 8), n = u.length, cols = n <= 4 ? 2 : 3, rows = Math.ceil(n / cols);
+    const cells = shuffle([...Array(cols * rows).keys()]).slice(0, n);
+    const pos = u.map((_, i) => { const k = cells[i], cx = k % cols, cy = Math.floor(k / cols); return { x: ((cx + .5 + (Math.random() - .5) * .3) / cols * 100).toFixed(1), y: ((cy + .5 + (Math.random() - .5) * .25) / rows * 100).toFixed(1), d: (3 + Math.random() * 2).toFixed(1), h: (180 + Math.random() * 140) | 0 }; });
+    return { u, pos, next: 0, got: [] };
+  },
+  html: (it, st) => {
+    const solved = st.next >= st.u.length;
+    return `<p class="prompt">${solved ? 'آفرین! همهٔ حباب‌ها ترکید. آیه را بلند بخوان' : 'حباب‌ها را به ترتیب آیه بترکان'}</p>
+      <div class="built ayah" aria-live="polite">${st.got.length ? st.got.map(i => esc(st.u[i])).join(' ') : '<span class="muted" style="font-size:1rem;font-family:var(--ui)">کلمهٔ اول را پیدا کن</span>'}</div>
+      ${solved ? contBtn : `<div class="bubbles">${st.u.map((t, i) => st.got.includes(i) ? '' : `<button class="bubble" style="left:${st.pos[i].x}%;top:${st.pos[i].y}%;--h:${st.pos[i].h};--dur:${st.pos[i].d}s" data-act="bubTap" data-i="${i}">${esc(t)}</button>`).join('')}</div>`}`;
+  }
+};
+
+/* ---- اشتباه‌یاب ---- */
+WG.spot = {
+  init: it => {
+    const w = words(it.s, it.a), pairs = [...Array(Math.max(0, w.length - 1)).keys()].filter(i => w[i] !== w[i + 1]);
+    let w2 = w.slice(), bad = [], type = 'sub';
+    if (pairs.length && (w.length >= 4 && Math.random() < .4)) { const i = pick(pairs); [w2[i], w2[i + 1]] = [w2[i + 1], w2[i]]; bad = [i, i + 1]; type = 'swap'; }
+    else { const i = Math.random() * w.length | 0, d = distractWords(w[i], it.s)[0]; if (d) { w2[i] = d; bad = [i]; } else if (pairs.length) { const j = pick(pairs); [w2[j], w2[j + 1]] = [w2[j + 1], w2[j]]; bad = [j, j + 1]; type = 'swap'; } }
+    return { w2, bad, type, wrong: 0, found: false, tip: false };
+  },
+  html: (it, st) => {
+    const w = words(it.s, it.a);
+    if (st.found) return `<p class="prompt">آفرین! پیدایش کردی. آیهٔ درست این است؛ بلند بخوانش</p>
+      <div class="ayah big">${w.map((x, i) => `<span class="w${st.bad.includes(i) ? ' good' : ''}">${esc(x)}</span>`).join(' ')}</div>${contBtn}`;
+    return `<p class="prompt">یکی از جاهای این آیه اشتباه است. پیدایش کن!</p>
+      <div class="ayah big">${st.w2.map((x, i) => `<span class="w tap${st.tip && st.bad.includes(i) ? ' tip' : ''}" data-act="spotTap" data-i="${i}" role="button" tabindex="0">${esc(x)}</span>`).join(' ')}</div>
+      <p class="muted" style="text-align:center">${st.tip ? 'راهنما: دور همان جای اشتباه خط‌چین کشیدم' : 'گاهی یک کلمه عوض شده، گاهی دو کلمه جایشان عوض شده'}</p>`;
+  }
+};
+
+/* ---- حرف اول ---- */
+WG.letters = {
+  init: () => ({ revealed: false, shown: new Set() }),
+  html: (it, st, c) => {
+    const w = words(it.s, it.a);
+    const spans = w.map((x, i) => st.revealed || st.shown.has(i) ? `<span class="w">${esc(x)}</span>` : `<span class="w hint" data-act="peek" data-i="${i}" role="button" tabindex="0">${esc(firstBits(x))}</span>`).join(' ');
+    return `<p class="prompt">فقط حرف اول هر کلمه را می‌بینی. آیه را بلند بخوان!</p><div class="ayah big">${spans}</div>
+      ${st.revealed ? rateButtons(it, c) : `<div class="stack" style="margin-top:14px"><button class="btn gold" data-act="reveal">نشانم بده</button><p class="muted" style="text-align:center;margin:0">روی هر حرف بزنی، همان کلمه باز می‌شود.</p></div>`}`;
+  }
+};
+
+/* ---- محو تدریجی ---- */
+WG.fade = {
+  init: it => { const n = words(it.s, it.a).length; return { order: shuffle([...Array(n).keys()]), level: 0, max: n <= 3 ? 1 : 2, shown: new Set() }; },
+  html: (it, st) => {
+    const w = words(it.s, it.a), n = w.length;
+    const cnt = st.level === 0 ? 0 : st.max === 1 ? Math.ceil(n / 2) : st.level === 1 ? Math.ceil(n / 3) : Math.ceil(2 * n / 3);
+    const hid = new Set(st.order.slice(0, cnt).filter(i => !st.shown.has(i)));
+    const msg = st.level === 0 ? 'آیه را کامل و بلند بخوان' : st.level === 1 ? 'چند کلمه پنهان شد. باز هم بلند بخوان' : 'کلمه‌های بیشتری پنهان شد. بلند بخوان';
+    return `<p class="prompt">${msg}</p><div class="ayah big">${w.map((x, i) => hid.has(i) ? `<span class="w hide" data-act="peek" data-i="${i}" role="button" tabindex="0">${esc(x)}</span>` : `<span class="w">${esc(x)}</span>`).join(' ')}</div>
+      <div class="stack" style="margin-top:14px"><button class="btn gold" data-act="fadeNext">خواندم ✅</button><p class="muted" style="text-align:center;margin:0">${st.level ? 'روی جای خالی بزنی، همان کلمه باز می‌شود.' : ''}</p></div>`;
+  }
+};
+
+/* ---- حافظهٔ دو نیمه (چند آیه) ---- */
+WG.memory = {
+  init: it => {
+    const cards = []; it.set.forEach((x, i) => { const w = words(x.s, x.a), k = Math.min(3, Math.floor(w.length / 2)); cards.push({ pair: i, t: w.slice(0, k).join(' ') + ' …' }, { pair: i, t: '… ' + w.slice(-k).join(' ') }); });
+    return { cards: shuffle(cards), open: [], matched: new Set(), busy: false };
+  },
+  html: (it, st) => {
+    const solved = st.matched.size === st.cards.length;
+    return `<p class="prompt">${solved ? 'آفرین! همهٔ جفت‌ها پیدا شد' : 'ابتدا و انتهای هر آیه را جفت کن'}</p>
+      <div class="mem">${st.cards.map((c, i) => { const up = st.open.includes(i) || st.matched.has(i); return `<button class="mc${up ? ' up' : ''}${st.matched.has(i) ? ' match' : ''}" data-act="memTap" data-i="${i}" ${up ? 'aria-label="باز"' : 'aria-label="بسته"'}>${up ? esc(c.t) : '🌿'}</button>`; }).join('')}</div>${solved ? contBtn : ''}`;
+  }
+};
+
+/* ---- ردیف آیه‌ها (چند آیهٔ پشت‌سرهم) ---- */
+const ayText = x => byId[x.s].v[x.a - 1][0];
+WG.seq = {
+  init: it => ({ bank: shufNot(it.set.map((_, i) => i)), picked: [] }),
+  html: (it, st) => {
+    const solved = st.picked.length === it.set.length;
+    return `<p class="prompt">${solved ? 'آفرین! ترتیب درست است. همه را پشت‌سرهم بلند بخوان' : `آیه‌های سورهٔ ${esc(byId[it.set[0].s].fa)} را به ترتیب بچین`}</p>
+      <div class="seq-slots">${it.set.map((x, j) => st.picked[j] != null ? `<div class="seq-slot full"><b>${fa(j + 1)}</b><span>${esc(ayText(it.set[st.picked[j]]))}</span></div>` : `<div class="seq-slot"><b>${fa(j + 1)}</b></div>`).join('')}</div>
+      ${solved ? contBtn : `<div class="seq-bank">${st.bank.filter(i => !st.picked.includes(i)).map(i => `<button class="seq-card" data-act="seqTap" data-i="${i}">${esc(ayText(it.set[i]))}</button>`).join('')}</div>`}`;
+  }
+};
+
+/* ---- گوش‌تیز ---- */
+function lpOpts(it) {
+  const want = byId[it.s].v[it.a - 1][0], pool = shuffle(byId[it.s].v.map(v => v[0]).filter(t => t !== want));
+  if (pool.length < 2) shuffle(SUR.flatMap(s => s.v.map(v => v[0])).filter(t => t !== want && !pool.includes(t))).forEach(t => pool.length < 2 && pool.push(t));
+  return shuffle([{ t: want, ok: true }, ...pool.slice(0, 2).map(t => ({ t, ok: false }))]);
+}
+WG.lp = {
+  init: it => ({ opts: lpOpts(it), played: false, noAudio: false, solved: false }),
+  html: (it, st) => `<p class="prompt">${st.solved ? 'آفرین! درست شنیدی' : 'آیه را بشنو و بگو کدام بود'}</p>
+    <div class="stack"><button class="btn water" data-act="lpPlay">${st.played ? '🔁 دوباره بشنو' : '▶ بشنو'}</button>
+    ${st.noAudio ? '<p class="muted" style="text-align:center;margin:0">فایل صوتی پیدا نشد. می‌توانی ادامه بدهی.</p><button class="btn ghost" data-act="wNext">ادامه</button>' : ''}</div>
+    <div class="opts" style="margin-top:12px">${st.opts.map((o, i) => `<button class="opt ${o.cls || ''}" data-act="lpPick" data-i="${i}">${esc(o.t)}</button>`).join('')}</div>${st.solved ? contBtn : ''}`
+};
+
+/* ============ فضای بازی‌ها ============ */
+const GAMES = {
+  puzzle: { emoji: '🧩', name: 'پازل آیه', desc: 'تکه‌های آیه را بکش و جای درستشان بگذار', hue: 205, kind: 'puzzle', need: w => w.length >= 3 },
+  bubbles: { emoji: '🫧', name: 'حباب‌های کلمه', desc: 'حباب‌ها را به ترتیب آیه بترکان', hue: 185, kind: 'bubbles', need: w => w.length >= 2 },
+  spot: { emoji: '🔍', name: 'اشتباه‌یاب', desc: 'جای اشتباه آیه را پیدا کن', hue: 18, kind: 'spot', need: w => w.length >= 2 },
+  blank: { emoji: '✏️', name: 'جای خالی', desc: 'کلمهٔ جاافتاده را پیدا کن', hue: 150, kind: 'blank', need: w => w.length >= 2 },
+  memory: { emoji: '🃏', name: 'حافظهٔ دو نیمه', desc: 'ابتدا و انتهای هر آیه را جفت کن', hue: 285, kind: 'memory', multi: true },
+  seq: { emoji: '🪜', name: 'ردیف آیه‌ها', desc: 'آیه‌های پشت‌سرهم را مرتب کن', hue: 335, kind: 'seq', multi: true },
+  listen: { emoji: '🎧', name: 'گوش‌تیز', desc: 'آیه را بشنو و پیدایش کن', hue: 45, kind: 'lp', need: () => true }
+};
+const learnedList = () => Object.keys(P().ay).map(k => { const [s, a] = k.split(':').map(Number), x = P().ay[k]; return { s, a, b: x.b, d: x.d }; });
+const weakFirst = l => l.map(x => ({ x, r: x.b + Math.random() * 2.5 - (x.d <= today() ? 1 : 0) })).sort((p, q) => p.r - q.r).map(o => o.x);
+function buildGame(id) {
+  const g = GAMES[id], L = learnedList(), q = [];
+  if (!g.multi) {
+    const pool = weakFirst(L.filter(x => g.need(words(x.s, x.a))));
+    for (let i = 0; i < 5 && pool.length; i++) { const x = pool[i % pool.length]; q.push({ t: 'rev', s: x.s, a: x.a, kind: g.kind, pr: true, game: id }); }
+    return q;
+  }
+  if (id === 'memory') {
+    const pool = L.filter(x => words(x.s, x.a).length >= 4); if (pool.length < 3) return q;
+    for (let r = 0; r < (pool.length >= 8 ? 2 : 1); r++) { const set = shuffle(pool).slice(0, Math.min(5, pool.length)).map(x => ({ s: x.s, a: x.a })); q.push({ t: 'rev', s: set[0].s, a: set[0].a, kind: 'memory', set, multi: true, pr: true, game: id }); }
+    return q;
+  }
+  const bySurah = {}; L.forEach(x => (bySurah[x.s] = bySurah[x.s] || []).push(x.a));
+  const runs = []; Object.entries(bySurah).forEach(([s, l]) => { l.sort((p, q2) => p - q2); let cur = [l[0]]; for (let i = 1; i <= l.length; i++) { if (l[i] === cur[cur.length - 1] + 1) cur.push(l[i]); else { if (cur.length >= 3) runs.push({ s: +s, a: cur }); cur = [l[i]]; } } });
+  for (let r = 0; r < 3 && runs.length; r++) {
+    const run = pick(runs), len = Math.min(run.a.length, Math.random() < .5 ? 3 : 4), st = Math.random() * (run.a.length - len + 1) | 0;
+    const set = run.a.slice(st, st + len).map(a => ({ s: run.s, a })); q.push({ t: 'rev', s: set[0].s, a: set[0].a, kind: 'seq', set, multi: true, pr: true, game: id });
+  }
+  return q;
+}
+const gameReason = id => id === 'memory' ? 'سه آیهٔ حفظ‌شده (چهار کلمه یا بیشتر) لازم است' : id === 'seq' ? 'سه آیهٔ پشت‌سرهم حفظ‌شده لازم است' : 'هنوز آیهٔ مناسبی نکاشته‌ای';
+function startGame(id) {
+  const q = buildGame(id); if (!q.length) { toast(gameReason(id)); return; }
+  sess = null; startSession(q);
+}
+VIEW.games = () => {
+  const nL = learnedList().length;
+  const cards = Object.entries(GAMES).map(([id, g]) => {
+    const ok = nL && buildGame(id).length > 0;
+    return `<button class="gcard" style="--gh:${g.hue}" data-act="gameStart" data-g="${id}" ${ok ? '' : 'disabled'}><span class="gem" aria-hidden="true">${g.emoji}</span><span class="gtx"><b>${g.name}</b><small>${ok ? g.desc : gameReason(id)}</small></span><span class="go" aria-hidden="true">‹</span></button>`;
+  }).join('');
+  return `<div class="stack"><h1>بازی‌ها</h1>
+    <p class="muted" style="margin:0">با آیه‌هایی که کاشته‌ای بازی کن تا محکم‌تر شوند. هر دورِ بی‌اشتباه یک ستاره دارد ⭐</p>
+    ${nL ? '' : '<div class="card"><b>🌱 اول چند آیه بکار</b><p class="muted" style="margin:6px 0 0">بعد از کاشتن آیه‌ها، بازی‌ها باز می‌شوند.</p></div>'}
+    <div>${cards}</div></div>`;
+};
+
 /* ============ حالت آزمایشی والدین ============
    یک پروفایل موقت فقط در حافظه است؛ هیچ‌چیز از آن در S.profiles یا localStorage نمی‌نشیند.
    با «خروج»، قفل‌کردن بخش والدین یا بازکردن دوبارهٔ صفحه، همه‌چیز پاک می‌شود. */
@@ -944,7 +1205,7 @@ function demoTools() {
     <div class="card stack"><b>یک درس مشخص</b>
       <div><label class="f" for="dsur">سوره</label><select id="dsur">${sOpts}</select></div>
       <div><label class="f" for="day">آیه</label><select id="day"></select></div>
-      <div><label class="f" for="dkind">نوع درس</label><select id="dkind"><option value="new">آیهٔ جدید (همهٔ مرحله‌ها)</option><option value="blank">مرور: جای خالی</option><option value="order">مرور: چیدن کلمه‌ها</option><option value="next">مرور: آیهٔ بعدی</option><option value="recite">مرور: از حفظ‌خواندن</option></select></div>
+      <div><label class="f" for="dkind">نوع درس</label><select id="dkind"><option value="new">آیهٔ جدید (همهٔ مرحله‌ها)</option><option value="blank">مرور: جای خالی</option><option value="order">مرور: چیدن کلمه‌ها</option><option value="next">مرور: آیهٔ بعدی</option><option value="recite">مرور: از حفظ‌خواندن</option><option value="puzzle">تمرین: پازل</option><option value="fade">تمرین: محو تدریجی</option><option value="spot">تمرین: اشتباه‌یاب</option><option value="letters">تمرین: حرف اول</option><option value="bubbles">تمرین: حباب‌ها</option><option value="lp">تمرین: گوش‌تیز</option></select></div>
       <div><label class="f" for="dbox">مرحلهٔ رشد گیاه (برای مرور)</label><select id="dbox">${bOpts}</select></div>
       <button class="btn" data-act="demoRun">شروع این درس</button></div>
     <div class="card stack"><b>باغ و زمان</b>
@@ -1107,7 +1368,11 @@ const A = {
   reveal: () => { sess.cur.st.revealed = true; draw(); },
   rate: el => {
     const c = sess.cur, r = el.dataset.r;
-    if (c.it.t === 'new' && r === 'again') { c.si = 0; initStep(); draw(); return; }
+    const last = c.si === c.steps.length - 1;
+    if (c.it.t === 'new') {
+      if (r === 'again') { if (last) { c.si = 0; c.used = new Set(); c.bn = 0; } initStep(); draw(); return; }
+      advance(); return;
+    }
     completeItem(r); draw();
   },
   bPick: el => {
@@ -1126,6 +1391,47 @@ const A = {
     const c = sess.cur, st = c.st; if (st.solved) return; const o = st.opts[+el.dataset.i];
     if (o.ok) { o.cls = 'ok'; st.solved = true; chime(); } else { o.cls = 'no'; st.wrong++; c.mist++; chime('bad'); }
     draw();
+  },
+  peek: el => { const c = sess.cur, st = c.st; st.shown.add(+el.dataset.i); draw(); },
+  fadeNext: () => { const c = sess.cur, st = c.st; if (st.level < st.max) { st.level++; st.shown = new Set(); draw(); } else advance(); },
+  wNext: () => { stopAudio(); advance(); },
+  pzPick: el => { const st = sess.cur.st, i = +el.dataset.pc; st.sel = st.sel === i ? null : i; draw(); },
+  pzSlot: el => { const st = sess.cur.st; if (st.sel != null) pzPlace(st.sel, +el.dataset.slot); },
+  bubTap: el => {
+    const c = sess.cur, st = c.st, i = +el.dataset.i;
+    if (i === st.next) { st.got.push(i); st.next++; chime(); el.classList.add('pop'); setTimeout(() => same(c) && draw(), 180); }
+    else { c.mist++; chime('bad'); el.classList.add('no'); setTimeout(() => el.classList.remove('no'), 450); }
+  },
+  spotTap: el => {
+    const c = sess.cur, st = c.st, i = +el.dataset.i;
+    if (st.bad.includes(i)) { st.found = true; chime(); draw(); }
+    else { c.mist++; st.wrong++; chime('bad'); el.classList.add('no'); if (st.wrong >= 2) { st.tip = true; draw(); } }
+  },
+  memTap: el => {
+    const c = sess.cur, st = c.st, i = +el.dataset.i; if (st.busy || st.open.includes(i) || st.matched.has(i)) return;
+    st.open.push(i); draw();
+    if (st.open.length === 2) {
+      const [x, y] = st.open;
+      if (st.cards[x].pair === st.cards[y].pair) { st.matched.add(x); st.matched.add(y); st.open = []; chime(); setTimeout(() => same(c) && draw(), 300); }
+      else { c.mist++; st.busy = true; chime('bad'); setTimeout(() => { if (!same(c)) return; st.open = []; st.busy = false; draw(); }, 900); }
+    }
+  },
+  seqTap: el => {
+    const c = sess.cur, st = c.st, i = +el.dataset.i;
+    if (i === st.picked.length) { st.picked.push(i); chime(); draw(); }
+    else { c.mist++; chime('bad'); el.classList.add('no'); setTimeout(() => el.classList.remove('no'), 450); }
+  },
+  lpPlay: async () => { const c = sess.cur, st = c.st, it = c.it; st.played = true; const r = await playAyah(it.s, it.a); if (same(c) && r === 'fail') { st.noAudio = true; } if (same(c)) draw(); },
+  lpPick: el => {
+    const c = sess.cur, st = c.st; if (st.solved) return; const o = st.opts[+el.dataset.i];
+    if (o.ok) { o.cls = 'ok'; st.solved = true; chime(); } else { o.cls = 'no'; c.mist++; chime('bad'); }
+    draw();
+  },
+  gameStart: el => startGame(el.dataset.g),
+  gameAgain: () => { const g = sess.q[0].game; sess = null; startGame(g); },
+  sideGame: el => {
+    const g = el.dataset.g; closeModal();
+    startSession([{ t: 'rev', s: +el.dataset.s, a: +el.dataset.a, kind: GAMES[g].kind, pr: true, game: g }]);
   },
   finishQ: () => { const c = sess.cur; completeItem(qRes(c.st.wrong)); draw(); },
 
@@ -1169,6 +1475,7 @@ const A = {
   demoExit: () => endDemo(),
   demoRun: () => {
     const s = +$('#dsur').value, a = +$('#day').value, kind = $('#dkind').value, bx = +$('#dbox').value;
+    if (kind === 'puzzle' && words(s, a).length < 3) { toast('این آیه برای پازل خیلی کوتاه است'); return; }
     if (kind === 'next' && a >= byId[s].v.length) { toast('آیهٔ آخر سوره «آیهٔ بعدی» ندارد'); return; }
     closeModal();
     if (kind === 'new') startSession([{ t: 'new', s, a }]);
@@ -1231,6 +1538,32 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferr
 window.addEventListener('appinstalled', () => { deferredPrompt = null; });
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
 applyFs(); route();
+
+/* کشیدن تکه‌های پازل با انگشت یا ماوس (زدن هم کار می‌کند) */
+(function () {
+  let d = null, moved = false;
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.pz-piece'); if (!el) return;
+    d = { el, x: e.clientX, y: e.clientY, r: el.getBoundingClientRect(), id: e.pointerId }; moved = false;
+  });
+  document.addEventListener('pointermove', e => {
+    if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (!moved && Math.hypot(dx, dy) < 10) return;
+    if (!moved) { moved = true; d.el.classList.add('drag'); d.el.style.width = d.r.width + 'px'; }
+    d.el.style.left = (d.r.left + dx) + 'px'; d.el.style.top = (d.r.top + dy) + 'px'; e.preventDefault();
+  }, { passive: false });
+  const end = e => {
+    if (!d) return; const el = d.el, was = moved; d = null;
+    if (!was) return;
+    el.style.pointerEvents = 'none';
+    const t = document.elementFromPoint(e.clientX, e.clientY), sl = t && t.closest('.pz-slot:not(.full)');
+    el.classList.remove('drag'); el.style.cssText = '';
+    if (sl) pzPlace(+el.dataset.pc, +sl.dataset.slot);
+    window._noClick = Date.now();
+  };
+  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+  document.addEventListener('click', e => { if (window._noClick && Date.now() - window._noClick < 300 && e.target.closest('.pz-piece')) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+})();
 
 </script>
 </body>
