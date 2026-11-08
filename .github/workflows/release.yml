@@ -26,6 +26,9 @@ jobs:
         run: |
           [ -f audio/timings.json ] || python3 tools/fetch-everyayah.py --build
           [ -f images/114_5.png ] || python3 tools/fetch-everyayah.py --images
+      - name: Make timings.js (for opening index.html directly from a folder)
+        run: |
+          python3 -c "import json;open('audio/timings.js','w',encoding='utf8').write('window.HIFZ_TIMINGS='+json.dumps(json.load(open('audio/timings.json',encoding='utf8')))+';')"
       - name: Package
         run: |
           mkdir dist

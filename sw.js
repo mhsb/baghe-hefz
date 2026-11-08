@@ -1,6 +1,6 @@
 /* سرویس‌ورکر باغ حفظ — کار آفلاین
    برای عوض‌کردن نسخهٔ برنامه، عدد VERSION را بالا ببرید. */
-const VERSION = 'v5';
+const VERSION = 'v7';
 const SHELL = 'hifz-shell-' + VERSION;
 const AUDIO = 'hifz-audio-v1';           // نام‌هایی که برنامه برای ذخیرهٔ صدا و تصویر آیه‌ها استفاده می‌کند
 const IMG = 'hifz-img-v1';

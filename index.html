@@ -290,18 +290,21 @@ main{position:relative;z-index:0}
 .gcard.runner{background:linear-gradient(135deg,#fff0d6,#ffe0cc);box-shadow:0 0 0 2px #f5b57a,0 5px 0 #eaa062;margin-top:6px}
 .rn{display:flex;flex-direction:column;gap:8px}
 .rn-top{display:flex;align-items:center;gap:12px;padding:4px 2px}.rn-top .x{font-size:1.3rem;padding:6px 10px}.rn-top span{margin-inline-start:auto}
-.rn-stage{position:relative;height:calc(100vh - 190px);min-height:380px;max-height:560px;border-radius:24px;overflow:hidden;touch-action:pan-y;user-select:none;isolation:isolate}
+.rn-stage{position:relative;height:calc(100vh - 120px);min-height:420px;max-height:640px;border-radius:24px;overflow:hidden;touch-action:none;user-select:none;isolation:isolate}
 .rn-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-#rnGate{position:absolute;inset:0;pointer-events:none}
-.rn-card{position:absolute;box-sizing:border-box;padding:6px 8px;text-align:center;direction:rtl;background:#fffdf4;border:3px solid #c9a24b;border-radius:12px;box-shadow:0 5px 0 #a9822e;font-family:var(--quran);font-size:calc(1.2rem*var(--fs));line-height:1.8;transform-origin:50% 100%;transition:opacity .4s}
-.rn-card.burn{background:#ffe3d1;border-color:#e0572b}
-.rn-card.pass{border-color:#3aa766;background:#e9f8ef;opacity:0}
 .rn-msg{position:absolute;top:34%;left:0;right:0;text-align:center;font-weight:800;font-size:1.6rem;color:#b36b00;text-shadow:0 2px 0 #fff;opacity:0;pointer-events:none}
 .rn-msg.go{animation:rnpop 1.1s ease-out}
 @keyframes rnpop{0%{opacity:0;transform:translateY(14px) scale(.8)}20%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
 .rn-ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(22,50,79,.35);padding:14px}
 .rn-panel{background:#fff;border-radius:22px;padding:18px;text-align:center;width:100%;max-width:340px}
-.rn-ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bism{text-align:center;font-family:var(--quran);font-size:calc(1.45rem*var(--fs));line-height:2;color:var(--leaf-d);margin:4px 0 2px;padding:2px 8px;border-radius:14px;background:#eef8f2}
+.bism small{display:block;font-family:var(--ui);font-size:.75rem;color:var(--muted);line-height:1.4}
+#rnGate{position:absolute;top:12px;left:8px;right:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;direction:ltr;pointer-events:none;opacity:0;transform:translateY(-10px);transition:opacity .35s,transform .35s;align-items:start}
+#rnGate.show{opacity:1;transform:none}
+.rn-card{box-sizing:border-box;padding:6px 6px;text-align:center;direction:rtl;background:rgba(255,253,244,.96);border:3px solid #c9a24b;border-radius:14px;box-shadow:0 4px 0 #a9822e;font-family:var(--quran);font-size:calc(1.12rem*var(--fs));line-height:1.75;transition:opacity .5s}
+.rn-card.burn{background:#ffe3d1;border-color:#e0572b}.rn-card.good{background:#e9f8ef;border-color:#3aa766}
+.rn-card.pass{opacity:0}
+#rnTime{position:absolute;top:0;left:0;right:0;height:5px;background:rgba(255,255,255,.35)}#rnTime i{display:block;height:100%;width:0;background:#f2b134;margin-inline:auto}
 
 [hidden]{display:none!important}
 </style>
@@ -311,6 +314,7 @@ main{position:relative;z-index:0}
 <nav class="tabs" id="nav" aria-label="بخش‌ها" hidden></nav>
 <div id="layer"></div>
 <noscript><p style="padding:24px;text-align:center">برای استفاده از باغ حفظ، جاوااسکریپت باید روشن باشد.</p></noscript>
+<script src="audio/timings.js"></script>
 <script>
 'use strict';
 /* داده‌های جزء ۳۰ — متن و ترجمه بدون تغییر؛ منابع در sources */
@@ -414,6 +418,7 @@ let playTok = 0, audioMode = {}, timings = null, timingsTried = false, audioWarn
 function stopAudio() { playTok++; try { AU.pause(); } catch (e) { } }
 function loadTimings() {
   if (timingsTried) return Promise.resolve(timings); timingsTried = true;
+  if (window.HIFZ_TIMINGS) return Promise.resolve(timings = window.HIFZ_TIMINGS);   // از audio/timings.js (روی file:// هم کار می‌کند)
   return fetch('audio/timings.json').then(r => r.ok ? r.json() : null).then(j => timings = j).catch(() => null);
 }
 function playUrl(url, start, stop, tok) {
@@ -427,16 +432,18 @@ function playUrl(url, start, stop, tok) {
     if (start) AU.onloadedmetadata = go; else go();
   });
 }
-/* پخش یک آیه: اول فایل آیه به آیه، بعد فایل کل سوره با جدول زمان‌ها */
+/* پخش یک آیه: اول فایل آیه به آیه، بعد فایل کل سوره با جدول زمان‌ها.
+   آیهٔ اولِ سوره‌ها در فایل اصلی با «بسم‌الله» شروع می‌شود؛ زمان بسم‌الله در timings.b جداست و آیه از بعد از آن پخش می‌شود. */
 async function playAyah(s, a) {
   const tok = ++playTok; AU.pause();
+  await loadTimings(); if (tok !== playTok) return 'cancel';
+  const bs = a === 1 && timings && timings.b && timings.b[s] ? timings.b[s][1] : 0;
   if (audioMode[s] !== 'surah' && audioMode[s] !== 'none') {
-    const r = await playUrl(ayUrl(s, a), 0, null, tok);
+    const r = await playUrl(ayUrl(s, a), bs, null, tok);
     if (r === 'ended') { audioMode[s] = 'ayah'; return 'ended'; }
     if (r === 'cancel' || r === 'blocked') return r;
     if (audioMode[s] === 'ayah') return 'fail';
   }
-  await loadTimings();
   const t = timings && timings[s];
   if (t && t[a - 1] != null && audioMode[s] !== 'none') {
     const r = await playUrl(suUrl(s), t[a - 1], t[a] != null ? t[a] : null, tok);
@@ -444,6 +451,19 @@ async function playAyah(s, a) {
     if (r !== 'fail') return r;
   }
   audioMode[s] = 'none'; return 'fail';
+}
+/* بسم‌الله‌ی اول همان سوره (اگر جدا نشده باشد، بسم‌الله‌ی عمومی audio/001001.mp3) */
+async function playBism(s) {
+  const tok = ++playTok; AU.pause();
+  await loadTimings(); if (tok !== playTok) return 'cancel';
+  const b = timings && timings.b && timings.b[s];
+  if (b) {
+    let r = 'fail';
+    if (audioMode[s] !== 'ayah') r = await playUrl(suUrl(s), b[0], b[1], tok);
+    if (r === 'fail' && audioMode[s] !== 'surah') r = await playUrl(ayUrl(s, 1), 0, b[1], tok);
+    if (r !== 'fail') return r;
+  }
+  return playUrl(ayUrl(1, 1), 0, null, tok);
 }
 async function playSurahFile(s) { const tok = ++playTok; AU.pause(); return playUrl(suUrl(s), 0, null, tok); }
 /* آیا فایل صوتی وجود دارد؟ (با خود المان صوت، تا روی file:// هم کار کند) */
@@ -712,7 +732,7 @@ VIEW.s = ([id]) => {
 function sheet(s, a) {
   const v = byId[s].v[a - 1], st = learned(s, a);
   openModal(`<div class="stack"><div class="muted" style="text-align:center;font-weight:700">سورهٔ ${byId[s].fa} · آیهٔ ${fa(a)}</div>
-    <div class="ayah" data-ayimg="${s}:${a}">${esc(v[0])}</div><div class="meaning">${esc(v[1])}</div>
+    ${bismLine(s, a)}<div class="ayah" data-ayimg="${s}:${a}">${esc(v[0])}</div><div class="meaning">${esc(v[1])}</div>
     <button class="btn water" data-act="hear" data-s="${s}" data-a="${a}">🔊 بشنو</button>
     ${st ? `<button class="btn" data-act="practiceOne" data-s="${s}" data-a="${a}">تمرین این آیه</button>
       <div class="sidegames"><span class="muted">بازی با این آیه:</span><div class="row">${[['puzzle', 3], ['bubbles', 2], ['spot', 2], ['listen', 1]].filter(([g, n]) => words(s, a).length >= n).map(([g]) => `<button class="btn ghost small" data-act="sideGame" data-g="${g}" data-s="${s}" data-a="${a}">${GAMES[g].emoji} ${GAMES[g].name}</button>`).join('')}</div></div>` : `<button class="btn" data-act="learnFrom" data-s="${s}" data-a="${a}">یاد بگیر و بکار</button>`}
@@ -822,7 +842,9 @@ function lessonHead() {
   const g = n && sess.q[0].game, lab = g ? `${GAMES[g].emoji} ${GAMES[g].name}` : c && c.it.t === 'new' ? '🌱 آیهٔ جدید' : '💧 مرور';
   return `<div class="qhead"><span>${lab} · ${fa(Math.min(sess.i + 1, n))} از ${fa(n)}</span><button class="x" data-act="quit" aria-label="خروج">✕</button></div><div class="steps" aria-hidden="true">${bars}</div>`;
 }
-const where = it => `<div class="muted" style="text-align:center;font-weight:700">سورهٔ ${esc(byId[it.s].fa)}${it.multi ? '' : ' · آیهٔ ' + fa(it.a)}</div>`;
+const BISM_T = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ';
+const bismLine = (s, a) => a === 1 && s !== 1 ? `<div class="bism" aria-label="بسم‌الله"><small>بسم‌الله (جدا از آیهٔ ۱)</small>${BISM_T}</div>` : '';
+const where = it => `<div class="muted" style="text-align:center;font-weight:700">سورهٔ ${esc(byId[it.s].fa)}${it.multi ? '' : ' · آیهٔ ' + fa(it.a)}</div>${it.multi ? '' : bismLine(it.s, it.a)}`;
 VIEW.lesson = () => {
   if (sess.i >= sess.q.length) return lessonEnd();
   const c = sess.cur, it = c.it, kind = c.steps[c.si], st = c.st, w = words(it.s, it.a);
@@ -920,6 +942,10 @@ function endOfSessionAward() {
 async function listenLoop() {
   const c = sess.cur, st = c.st, it = c.it, tok = ++st.run; st.playing = true; st.noAudio = false; st.blocked = false; draw();
   while (st.done < st.n) {
+    if (it.a === 1 && st.done === 0 && !st.bismDone) {        // بسم‌الله فقط یک‌بار، قبل از اولین خواندن
+      const r0 = await playBism(it.s); if (sess.cur !== c || st.run !== tok || r0 === 'cancel') return;
+      st.bismDone = true; if (r0 === 'ended') await sleep(350); if (sess.cur !== c || st.run !== tok) return;
+    }
     const r = await playAyah(it.s, it.a);
     if (sess.cur !== c || st.run !== tok || r === 'cancel') return;
     if (r === 'ended') { st.done++; const d = $('#dots'); d && d.children[st.done - 1] && d.children[st.done - 1].classList.add('done'); if (st.done < st.n) await sleep(450); if (sess.cur !== c || st.run !== tok) return; }
@@ -928,6 +954,7 @@ async function listenLoop() {
   st.playing = false; if (sess.cur === c) draw();
 }
 async function hear(s, a) {
+  if (a === 1 && s !== 1) { const r0 = await playBism(s); if (r0 === 'cancel' || r0 === 'blocked') return; if (r0 === 'ended') await sleep(300); }
   const r = await playAyah(s, a);
   if (r === 'fail' && !audioWarned) { audioWarned = true; toast('فایل صوتی پیدا نشد. راهنما در بخش والدین است'); }
 }
@@ -1202,11 +1229,14 @@ VIEW.games = () => {
 const runCard = () => { const ok = runPlan().length > 0; return `<button class="gcard runner" data-act="runOpen" ${ok ? '' : 'disabled'}><span class="gem" aria-hidden="true">🏃</span><span class="gtx"><b>دونده</b><small>${ok ? 'از ناس شروع کن و آیهٔ درستِ بعدی را انتخاب کن؛ آیهٔ غلط آتش است! هر چه سوره‌های بیشتر، امتیاز بیشتر' : 'اول آیهٔ اول سورهٔ ناس را بکار'}</small></span><span class="go" aria-hidden="true">‹</span></button>`; };
 
 /* ============ دونده ============
-   سه مسیر؛ در هر دروازه سه «آیه» پیش‌رو هست. فقط آیهٔ درستِ بعدی راه را باز می‌کند و دو تای دیگر آتش‌اند.
-   ترتیب مثل ترتیب حفظ: بسم‌الله ← آیه‌های ناس ← (مرحلهٔ سکه) ← بسم‌الله ← فلق ... تا جایی که کودک پشت‌سرهم حفظ کرده. */
+   صحنهٔ شبه‌سه‌بعدی روی canvas دوبعدی (سبک و سریع): دوربین پشت دونده، مسیر و درخت‌ها با پرسپکتیو واقعی از فاصلهٔ z.
+   دونده یک اسکلت سه‌بعدی کوچک دارد (ران، ساق، بازو) که هر فریم به صفحه تصویر می‌شود.
+   سرعت دویدن همیشه ثابت است. فاصلهٔ دروازه‌ها طوری تنظیم می‌شود که صدای آیهٔ جواب‌داده‌شده در راه پخش شود.
+   ترتیب: بسم‌الله‌ی سوره ← آیه‌های ناس ← (مرحلهٔ سکه) ← بسم‌الله‌ی فلق ... تا جایی که کودک پشت‌سرهم حفظ کرده. */
 const BISM = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ';
-const RN_PACE = [{ n: 'آرام', hold: 8, appr: 3.8 }, { n: 'متوسط', hold: 6, appr: 2.9 }, { n: 'تند', hold: 4.5, appr: 2.2 }];
-const RN = { phase: 'idle', loop: false, cv: null, W: 0, H: 0, lane: 1, rx: 0, scroll: 0, t: 0, ev: [], ei: 0, q: null, score: 0, coins: 0, ayahs: 0, sdone: 0, audioBusy: false, atok: 0, bonus: null, dt: 0, last: 0, pop: null, newBest: false, stars: 0 };
+const RN_PACE = [{ n: 'آرام', sight: 7 }, { n: 'متوسط', sight: 5.2 }, { n: 'تند', sight: 3.8 }];   // مدت دیدن و جواب‌دادن (ثانیه)
+const RN_D = 24, RN_Z0 = 5;                                 // دید (متر) و ضریب پرسپکتیو
+const RN = { phase: 'idle', loop: false, cv: null, W: 0, H: 0, lane: 1, rx: 0, t: 0, dist: 0, ev: [], ei: 0, q: null, score: 0, coins: 0, ayahs: 0, sdone: 0, atok: 0, bonus: null, dt: 0, last: 0, newBest: false, stars: 0, pend: null, shown: 0, vx: 0 };
 
 function runPlan() {                                   // سوره‌هایی که از ناس به ترتیب و پشت‌سرهم حفظ شده‌اند (آیه‌ها هم از اول سوره به ترتیب)
   const segs = [];
@@ -1221,6 +1251,7 @@ function runEvents() {
   return ev;
 }
 const rnPace = () => RN_PACE[Math.min(2, Math.max(0, S.set.runPace == null ? 1 : S.set.runPace))];
+const rnV = () => RN_D / rnPace().sight;
 const rnAyText = ev => ev.a ? byId[ev.s].v[ev.a - 1][0] : BISM;
 
 function rnOpts(ev) {
@@ -1230,7 +1261,7 @@ function rnOpts(ev) {
   if (pool.length < 3) shuffle(SUR.flatMap(s => s.v.map(v => v[0]))).forEach(t => pool.length < 8 && add(t));
   const wr = ev.a === 0 ? [g.v[0][0], ...shuffle(pool.filter(t => t !== g.v[0][0]))].slice(0, 2) : shuffle(pool).slice(0, 2);
   const texts = [cor, ...wr]; let shown = texts;
-  for (let k = 3; k <= 14; k++) {
+  for (let k = 3; k <= 12; k++) {
     shown = texts.map(t => { const w = t.split(' '); return w.length <= k + 1 ? t : w.slice(0, k).join(' ') + ' …'; });
     if (new Set(shown).size === 3) break;
   }
@@ -1238,76 +1269,103 @@ function rnOpts(ev) {
   return { cards: order.map(i => shown[i]), correct: order.indexOf(0) };
 }
 
+/* ---- مدت صدا (برای فاصلهٔ دروازهٔ بعدی) ---- */
+const rnProbe = url => new Promise(res => {
+  const a = new Audio(); a.preload = 'metadata'; let d = false; const f = v => { if (!d) { d = true; a.onloadedmetadata = a.onerror = null; res(v); } };
+  a.onloadedmetadata = () => f(isFinite(a.duration) ? a.duration : null); a.onerror = () => f(null); setTimeout(() => f(null), 1500); a.src = url;
+});
+async function rnAnsDur(ev) {
+  const s = ev.s, a = ev.a, est = a ? Math.max(1.5, words(s, a).length * .85 + .5) : 4;
+  try {
+    await loadTimings(); const t = timings && timings[s], b = timings && timings.b && timings.b[s];
+    if (!a) { if (b) return b[1] - b[0]; return (await rnProbe(ayUrl(1, 1))) || est; }
+    if (t && t[a - 1] != null) {
+      if (t[a] != null) return t[a] - t[a - 1];
+      const d = await rnProbe(suUrl(s)); if (d) return d - t[a - 1];
+    }
+    const d = await rnProbe(ayUrl(s, a)); if (d) return d - (a === 1 && b ? b[1] : 0);
+  } catch (e) { }
+  return est;
+}
+
 /* ---- شروع و پایان ---- */
 function rnStart() {
   RN.ev = runEvents(); if (!RN.ev.length) return;
-  Object.assign(RN, { ei: 0, score: 0, coins: 0, ayahs: 0, sdone: 0, lane: 1, bonus: null, newBest: false, stars: 0, audioBusy: false, dt: 0, pop: null });
-  stopAudio(); RN.atok++; RN.shown = 0; rnNext(true); rnHud(); rnOverlay();
+  Object.assign(RN, { ei: 0, score: 0, coins: 0, ayahs: 0, sdone: 0, lane: 1, bonus: null, newBest: false, stars: 0, q: null, pend: null, dt: 0, shown: 0 });
+  stopAudio(); RN.atok++; RN.phase = 'run'; rnGate(); rnWait(RN.ev[0], .9);
+  rnHud(); rnOverlay();
 }
-function rnNext(first) {
+function rnSpawn(ev, dur, waited) {
+  const v = rnV(), o = rnOpts(ev);
+  RN.q = { e: ev, o, z: RN_D + v * Math.max(.2, dur + .3 - waited), over: null }; RN.pend = null; rnGate(); rnHud();
+}
+function rnWait(ev, dur) {                              // دروازهٔ بعدی وقتی ظاهر می‌شود که صدای آیهٔ قبلی تمام شده باشد
+  const me = RN.pend = { t: RN.t, ev };
+  const run = d => { if (RN.pend === me && (RN.phase === 'run')) rnSpawn(ev, d, RN.t - me.t); };
+  if (typeof dur === 'number') run(dur); else dur.then(run);
+}
+function rnAdvance() {                                  // به رویداد بعدی
   const e = RN.ev[RN.ei];
-  if (!e) { rnFinish(true); return; }
-  if (e.k === 'q') { const o = rnOpts(e); RN.q = { e, o, p: 0, t: 0, over: null }; RN.phase = 'run'; rnGate(); }
-  else {
-    RN.sdone++; RN.score += 50 * (e.si + 1); RN.q = null; RN.phase = 'bonus'; RN.bonus = { t: 0, spawn: .6, coins: [], run: 0, lane: 1, got: 0 };
-    rnGate(); rnPopup('مرحلهٔ سکه‌ها 🪙'); chime('big');
-  }
-  rnHud();
+  if (!e) return false;
+  if (e.k === 'q') return true;
+  RN.sdone++; RN.score += 50 * (e.si + 1); RN.q = null; RN.pend = null; RN.phase = 'bonus'; RN.bonus = { t: 0, spawn: .5, coins: [], run: 0, lane: 1, got: 0 };
+  rnGate(); rnPopup('مرحلهٔ سکه‌ها 🪙'); chime('big'); rnHud(); return true;
 }
 function rnFinish(win) {
-  const p = P(); RN.phase = win ? 'win' : 'dead'; RN.dt = win ? 1.2 : 0;
+  const p = P(); RN.phase = win ? 'win' : 'dead'; RN.dt = 0; RN.shown = 0;
   if (RN.score > (p.rb || 0)) { p.rb = RN.score; RN.newBest = RN.score > 0; }
   RN.stars = Math.min(5, RN.sdone); if (RN.stars) addStars(RN.stars); else touchDay();
-  save(); rnGate();
+  save();
 }
-async function rnAudio(ev) {                           // صدای آیهٔ جواب‌داده‌شده، همین‌طور که دونده می‌دود
-  const my = ++RN.atok; RN.audioBusy = true;
-  try { await (ev.a ? playAyah(ev.s, ev.a) : playAyah(1, 1)); } catch (e) { }
-  if (my === RN.atok) RN.audioBusy = false;
+function rnAudio(ev) {                                  // صدای آیهٔ جواب‌داده‌شده، همین‌طور که دونده می‌دود. بسم‌الله = بسم‌الله‌ی همان سوره
+  const my = ++RN.atok;
+  return (async () => { try { await (ev.a ? playAyah(ev.s, ev.a) : playBism(ev.s)); } catch (e) { } })().then(() => my === RN.atok);
 }
 function rnResolve() {
   const q = RN.q, ok = RN.lane === q.o.correct;
-  if (ok) {
-    const pts = 10 * (q.e.si + 1); RN.score += pts; RN.ayahs++; chime();
-    q.over = 'ok'; rnPopup(`+${fa(pts)}`); rnAudio(q.e); RN.ei++; rnHud();
-    rnNext();
-  } else { chime('bad'); q.over = 'burn'; RN.phase = 'dying'; RN.dt = 0; stopAudio(); RN.atok++; RN.audioBusy = false; }
+  if (!ok) { chime('bad'); q.over = 'burn'; RN.phase = 'dying'; RN.dt = 0; stopAudio(); RN.atok++; rnGate(); return; }
+  const prev = q.e, pts = 10 * (prev.si + 1); RN.score += pts; RN.ayahs++; chime(); rnPopup(`+${fa(pts)}`);
+  const au = rnAudio(prev), dur = rnAnsDur(prev); RN.ei++; RN.q = null; rnGate(); rnHud();
+  if (!RN.ev[RN.ei]) { au.then(cur => { if (cur && RN.phase === 'run' && !RN.q) { rnFinish(true); } }); return; }
+  if (rnAdvance() && RN.ev[RN.ei].k === 'q') rnWait(RN.ev[RN.ei], dur);
 }
 
 /* ---- بروزرسانی ---- */
 function rnUpdate(dt) {
-  RN.t += dt; const ph = RN.phase;
-  if (ph === 'run' || ph === 'bonus' || ph === 'dying') RN.scroll += dt * (ph === 'dying' ? .3 : 1.6);
-  if (ph === 'run') {
-    const q = RN.q, pc = rnPace(); q.t += dt;
-    if (q.t < pc.hold || RN.audioBusy) { if (q.p < .8) q.p = Math.min(.8, q.p + dt * .8 / 2.2); }
-    else q.p = Math.min(1, q.p + dt * .2 / pc.appr);
-    if (q.p >= 1) rnResolve();
+  RN.t += dt; const ph = RN.phase, v = rnV();
+  if (ph === 'run' || ph === 'bonus') RN.dist += v * dt; else if (ph === 'idle') RN.dist += v * dt * .3;
+  RN.vx = RN.vx * .85;
+  if (ph === 'run' && RN.q) {
+    const q = RN.q; q.z -= v * dt; if (q.z <= 0) rnResolve();
+    const el = $('#rnGate'); if (el && RN.q === q) { const show = q.z <= RN_D; if (show !== !!q.shown) { q.shown = show; el.classList.toggle('show', show); } const tb = $('#rnTime i'); if (tb) tb.style.width = Math.max(0, Math.min(100, q.z / RN_D * 100)) + '%'; }
   } else if (ph === 'bonus') {
     const b = RN.bonus; b.t += dt; b.spawn -= dt;
     if (b.t < 9 && b.spawn <= 0) {
       if (!b.run) { b.run = Math.random() < .5 ? 3 : 1; b.lane = Math.random() * 3 | 0; }
-      b.coins.push({ l: b.lane, f: 0 }); b.run--; b.spawn = b.run ? .28 : .7;
+      b.coins.push({ l: b.lane, z: RN_D }); b.run--; b.spawn = b.run ? .3 : .75;
     }
-    b.coins.forEach(c => c.f += dt / 1.3);
-    b.coins = b.coins.filter(c => { if (c.f < 1) return true; if (c.l === RN.lane) { RN.coins++; RN.score += 5; b.got++; chime(); rnHud(); } return false; });
-    if (b.t >= 9 && !b.coins.length) { RN.ei++; rnNext(); }
+    b.coins.forEach(c => c.z -= v * dt);
+    b.coins = b.coins.filter(c => { if (c.z > 0) return true; if (c.l === RN.lane) { RN.coins++; RN.score += 5; b.got++; chime(); rnHud(); } return false; });
+    if (b.t >= 9 && !b.coins.length) {
+      RN.ei++; RN.bonus = null; RN.phase = 'run';
+      if (!RN.ev[RN.ei]) rnFinish(true); else rnWait(RN.ev[RN.ei], .8);
+    }
   } else if (ph === 'dying') { RN.dt += dt; if (RN.dt > 1.5) rnFinish(false); }
-  else if (ph === 'dead' || ph === 'win') { RN.dt += dt; if (RN.dt > .5 && !RN.shown) { RN.shown = 1; rnOverlay(); } }
-  rnPlaceGate();
+  else if (ph === 'dead' || ph === 'win') { RN.dt += dt; if (RN.dt > .4 && !RN.shown) { RN.shown = 1; rnOverlay(); } }
 }
 
-/* ---- هندسهٔ صحنه ---- */
-const geo = () => {
-  const W = RN.W, H = RN.H, hor = H * .2, yr = H * .8, lw = W * .3, G = f => Math.pow(Math.max(0, f), 1.7);
-  return { W, H, hor, yr, lw, sc: f => .18 + .82 * G(f), y: f => hor + (yr - hor) * G(f), x: (l, f) => W / 2 + (l - 1) * lw * (.18 + .82 * G(f)) };
+/* ---- هندسه ---- */
+const rnG = () => {
+  const W = RN.W, H = RN.H, hor = H * .27, yr = H * .84, lw = W * .3, sc = z => 1 / (1 + z / RN_Z0);
+  return { W, H, hor, yr, lw, sc, y: z => hor + (yr - hor) * sc(z), x: (l, z) => W / 2 + (l - 1) * lw * sc(z) };
 };
 function rnSize() {
   const st = $('#rnStage'); if (!st || !RN.cv) return;
   const dpr = Math.min(2, window.devicePixelRatio || 1); RN.W = st.clientWidth; RN.H = st.clientHeight;
   RN.cv.width = RN.W * dpr; RN.cv.height = RN.H * dpr; RN.cv.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
-  RN.rx = geo().x(RN.lane, 1);
+  RN.rx = rnG().x(RN.lane, 0);
 }
+const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 function flame(g, x, y, w, h, t, k) {
   for (let i = 0; i < 5; i++) {
     const fx = x + (i - 2) * w / 5, hh = h * (.6 + .4 * Math.sin(t * 9 + i * 1.7 + k)), ww = w / 4.2;
@@ -1315,58 +1373,108 @@ function flame(g, x, y, w, h, t, k) {
     g.fillStyle = gr; g.beginPath(); g.moveTo(fx - ww, y); g.quadraticCurveTo(fx - ww * .6, y - hh * .6, fx + Math.sin(t * 7 + i) * ww * .4, y - hh); g.quadraticCurveTo(fx + ww * .7, y - hh * .5, fx + ww, y); g.closePath(); g.fill();
   }
 }
+
+/* ---- دونده: اسکلت سه‌بعدی ساده (x راست، y بالا، z جلو) ---- */
+function rnRunner(g, X, Y, S, st) {
+  const { dead, run, lean } = st, φ = RN.t * 11.5, L1 = .36, L2 = .36, lean0 = run ? .2 : 0;
+  const leg = σ => {
+    const ph = φ + (σ > 0 ? 0 : Math.PI), a1 = run ? .8 * Math.sin(ph) : 0, kf = run ? .15 + 1.15 * Math.max(0, Math.cos(ph)) : 0, a2 = a1 - kf;
+    return { a1, a2, rise: L1 * Math.cos(a1) + L2 * Math.cos(a2), ph };
+  };
+  const lg = [leg(-1), leg(1)], hipY = Math.max(lg[0].rise, lg[1].rise) + .02;
+  const ZV = .18, pr = (x, y, z) => { const pf = 1 / (1 + z * .12); return [X + (x + lean * y * .12) * S * pf, Y - y * S * pf - z * S * ZV]; };
+  const hip = [0, hipY, 0], sh = [0, hipY + .56 * Math.cos(lean0), .56 * Math.sin(lean0)];
+  const parts = [];
+  const limb = (p, q, w, col, key) => parts.push({ key, f: () => { const a = pr(...p), b = pr(...q); g.strokeStyle = col; g.lineWidth = w * S; g.lineCap = 'round'; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); } });
+  const sk = dead ? '#c98a5a' : '#f1c27d', shirt = dead ? '#8a4a3a' : '#2f9e6b', pants = '#34527f';
+  [-1, 1].forEach((σ, i) => {
+    const l = lg[i], hp = [σ * .1, hipY, 0], kn = [σ * .1, hipY - L1 * Math.cos(l.a1), L1 * Math.sin(l.a1)], an = [σ * .1, kn[1] - L2 * Math.cos(l.a2), kn[2] + L2 * Math.sin(l.a2)];
+    limb(hp, kn, .13, pants, kn[2] - .5); limb(kn, an, .095, sk, an[2] - .45);
+    parts.push({ key: an[2] - .44, f: () => { const a = pr(...an); g.fillStyle = '#e8e8ee'; g.beginPath(); g.ellipse(a[0], a[1] + S * .02, S * .085, S * .05, 0, 0, 7); g.fill(); g.fillStyle = '#e0572b'; g.beginPath(); g.ellipse(a[0], a[1] + S * .045, S * .085, S * .025, 0, 0, 7); g.fill(); } });
+    const ph = l.ph, b1 = run ? -.95 * Math.sin(ph) : .1, b2 = b1 + (run ? 1.35 : .3), shP = [σ * .27 + lean * .05, sh[1] - .04, sh[2] - σ * (run ? .05 * Math.sin(φ) : 0)],
+      el = [shP[0] + σ * .07, shP[1] - .27 * Math.cos(b1), shP[2] + .27 * Math.sin(b1)], ha = [el[0], el[1] - .26 * Math.cos(b2), el[2] + .26 * Math.sin(b2)];
+    limb(shP, el, .095, shirt, el[2] + .3); limb(el, ha, .08, sk, ha[2] + .3);
+    parts.push({ key: ha[2] + .29, f: () => { const a = pr(...ha); g.fillStyle = sk; g.beginPath(); g.arc(a[0], a[1], S * .05, 0, 7); g.fill(); } });
+  });
+  parts.push({ key: .05, f: () => {                           // پیراهن و کوله‌پشتی
+    const a = pr(-.15, hipY + .02, 0), b = pr(.15, hipY + .02, 0), c = pr(.26, sh[1], sh[2]), d = pr(-.26, sh[1], sh[2]);
+    g.fillStyle = shirt; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); g.lineTo(...d); g.closePath(); g.fill();
+    const m = pr(0, hipY + .3, -.06); g.fillStyle = '#f2b134'; g.beginPath(); g.ellipse(m[0], m[1], S * .13, S * .17, 0, 0, 7); g.fill(); g.strokeStyle = '#c98a14'; g.lineWidth = S * .02; g.stroke();
+  } });
+  parts.push({ key: -1, f: () => {                            // سر، از پشت
+    const n = pr(0, sh[1] + .06, sh[2]), h = pr(0, sh[1] + .24, sh[2] + .03);
+    g.fillStyle = sk; g.fillRect(n[0] - S * .035, h[1], S * .07, n[1] - h[1]);
+    for (const σ of [-1, 1]) { g.beginPath(); g.arc(h[0] + σ * S * .125, h[1] + S * .01, S * .035, 0, 7); g.fill(); }
+    g.fillStyle = '#2b2118'; g.beginPath(); g.arc(h[0], h[1], S * .15, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.14)'; g.beginPath(); g.ellipse(h[0] - S * .04, h[1] - S * .05, S * .05, S * .03, -.5, 0, 7); g.fill();
+  } });
+  const sh0 = pr(0, 0, 0); g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(sh0[0], Y + 2, S * .3, S * .07, 0, 0, 7); g.fill();
+  parts.sort((p, q) => q.key - p.key).forEach(p => p.f());
+  if (dead) { flame(g, X, Y, S * .7, S * 1.2, RN.t, 3); flame(g, X - S * .1, Y - S * .35, S * .5, S * .9, RN.t + 1, 5); }
+}
+
 function rnDraw() {
-  const c = RN.cv; if (!c || !RN.W) return; const g = c.getContext('2d'), o = geo(), { W, H, hor, yr, lw } = o;
-  let gr = g.createLinearGradient(0, 0, 0, hor + 30); gr.addColorStop(0, '#9ed8ec'); gr.addColorStop(1, '#e9f8ef'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#ffd86b'; g.beginPath(); g.arc(W * .78, hor * .6, 26, 0, 7); g.fill();
-  g.fillStyle = '#7fcf9c'; g.beginPath(); g.moveTo(0, hor + 2); for (let x = 0; x <= W; x += 20) g.lineTo(x, hor - 22 - 14 * Math.sin(x / 55)); g.lineTo(W, hor + 2); g.fill();
-  gr = g.createLinearGradient(0, hor, 0, H); gr.addColorStop(0, '#74c98f'); gr.addColorStop(1, '#3f9f6a'); g.fillStyle = gr; g.fillRect(0, hor, W, H - hor);
-  const FM = 1.25;                                            // مسیر شنی
-  g.fillStyle = '#ecdcae'; g.beginPath(); g.moveTo(W / 2 - 1.5 * lw * o.sc(0), hor); g.lineTo(W / 2 + 1.5 * lw * o.sc(0), hor); g.lineTo(W / 2 + 1.5 * lw * o.sc(FM), o.y(FM)); g.lineTo(W / 2 - 1.5 * lw * o.sc(FM), o.y(FM)); g.closePath(); g.fill();
-  g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineCap = 'round';
-  for (let k = 0; k < 10; k++) {
-    const f = ((k + RN.scroll) % 10) / 10 * FM, f2 = f + .05; g.lineWidth = 1 + 5 * o.sc(f);
-    for (const d of [-.5, .5]) { g.beginPath(); g.moveTo(W / 2 + d * lw * o.sc(f), o.y(f)); g.lineTo(W / 2 + d * lw * o.sc(f2), o.y(f2)); g.stroke(); }
+  const c = RN.cv; if (!c || !RN.W) return; const g = c.getContext('2d'), o = rnG(), { W, H, hor, yr, lw, sc } = o, d = RN.dist;
+  let gr = g.createLinearGradient(0, 0, 0, hor + 20); gr.addColorStop(0, '#8fd0e8'); gr.addColorStop(1, '#eaf8ef'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#ffd86b'; g.beginPath(); g.arc(W * .8, hor * .62, 24, 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 3; i++) { const cx = ((i * 190 - d * 2.5) % (W + 160) + W + 160) % (W + 160) - 80, cy = 30 + i * 22; g.beginPath(); g.ellipse(cx, cy, 48, 13, 0, 0, 7); g.ellipse(cx + 22, cy - 8, 28, 12, 0, 0, 7); g.fill(); }
+  g.fillStyle = '#86d3a3'; g.beginPath(); g.moveTo(0, hor + 2); for (let x = 0; x <= W; x += 16) g.lineTo(x, hor - 20 - 12 * Math.sin(x / 50 + d * .01)); g.lineTo(W, hor + 2); g.fill();
+  const ZF = 90;
+  g.fillStyle = '#5cbb7f'; g.fillRect(0, hor, W, H - hor);       // چمن راه‌راه برای حس سرعت
+  const S6 = 6, i0 = Math.floor(d / S6);
+  for (let i = i0 + Math.ceil(ZF / S6); i >= i0 - 1; i--) {
+    if (i % 2) continue; const za = i * S6 - d, zb = za + S6; if (zb < -3) continue;
+    const ya = o.y(Math.min(ZF, Math.max(-3, za))), yb = o.y(Math.min(ZF, Math.max(-3, zb)));
+    g.fillStyle = '#4fae73'; g.fillRect(0, Math.min(ya, yb), W, Math.abs(ya - yb) + 1);
   }
-  for (let k = 0; k < 8; k++) {                                // درخت‌های کنار مسیر
-    const f = ((k + RN.scroll * .7) % 8) / 8 * 1.15, s = o.sc(f);
-    for (const d of [-1, 1]) {
-      const x = W / 2 + d * lw * s * (2 + (k % 3) * .45), y = o.y(f), r = 34 * s;
-      g.fillStyle = '#7a5a3a'; g.fillRect(x - 4 * s, y - 36 * s, 8 * s, 36 * s);
-      g.fillStyle = k % 2 ? '#2f8f58' : '#3aa766'; g.beginPath(); g.arc(x, y - 48 * s, r, 0, 7); g.arc(x - r * .6, y - 36 * s, r * .7, 0, 7); g.arc(x + r * .6, y - 36 * s, r * .7, 0, 7); g.fill();
+  g.fillStyle = '#ecdcae'; g.beginPath();                           // مسیر شنی
+  const e = z => 1.5 * lw * sc(z); g.moveTo(W / 2 - e(ZF), o.y(ZF)); g.lineTo(W / 2 + e(ZF), o.y(ZF)); g.lineTo(W / 2 + e(-3), o.y(-3)); g.lineTo(W / 2 - e(-3), o.y(-3)); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineCap = 'round';
+  const D2 = 2.4, j0 = Math.floor(d / D2);
+  for (let j = j0 + Math.ceil(50 / D2); j >= j0 - 1; j--) {
+    const za = j * D2 - d, zb = za + 1.1; if (zb < -3) continue; g.lineWidth = Math.max(1, 5 * sc(za));
+    for (const dd of [-.5, .5]) { g.beginPath(); g.moveTo(W / 2 + dd * lw * sc(Math.max(-3, za)), o.y(Math.max(-3, za))); g.lineTo(W / 2 + dd * lw * sc(zb), o.y(zb)); g.stroke(); }
+  }
+  const T = 3.2, k0 = Math.floor(d / T);                           // درخت‌ها و بوته‌ها، دور به نزدیک
+  for (let k = k0 + Math.ceil(70 / T); k >= k0 - 1; k--) {
+    const z = k * T - d; if (z < -2) continue; const s = sc(z);
+    for (const side of [-1, 1]) {
+      const h = hash(k * 2 + (side > 0 ? 1 : 0)), x = W / 2 + side * lw * s * (1.95 + h * 1.6), y = o.y(z);
+      if (h < .22) { g.fillStyle = '#9b9b95'; g.beginPath(); g.ellipse(x, y, 16 * s, 9 * s, 0, 0, 7); g.fill(); continue; }
+      if (h < .4) { g.fillStyle = '#2f8f58'; g.beginPath(); g.ellipse(x, y - 8 * s, 20 * s, 14 * s, 0, 0, 7); g.fill(); continue; }
+      const r = (26 + h * 14) * s * 1.6;
+      g.fillStyle = '#7a5a3a'; g.fillRect(x - 4 * s * 1.6, y - 34 * s * 1.6, 8 * s * 1.6, 34 * s * 1.6);
+      g.fillStyle = h > .7 ? '#2f8f58' : '#3aa766'; g.beginPath(); g.arc(x, y - 46 * s * 1.6, r, 0, 7); g.arc(x - r * .6, y - 34 * s * 1.6, r * .7, 0, 7); g.arc(x + r * .6, y - 34 * s * 1.6, r * .7, 0, 7); g.fill();
     }
   }
   const q = RN.q;
-  if (RN.phase === 'run' || RN.phase === 'dying') {            // آتش پای دروازه؛ هر سه مسیر مثل هم‌اند تا جواب لو نرود
-    if (q && q.over !== 'ok') for (let l = 0; l < 3; l++) flame(g, o.x(l, q.p), o.y(q.p), lw * o.sc(q.p) * .9, 46 * o.sc(q.p), RN.t, l);
+  if (q && RN.phase !== 'bonus' && q.z < RN_D * 1.6) {            // دیوار آتش در هر سه مسیر (جواب لو نمی‌رود)
+    const s = sc(q.z), y = o.y(q.z);
+    for (let l = 0; l < 3; l++) {
+      if (q.over === 'ok' && l === q.o.correct) continue;
+      const x = o.x(l, q.z), w = lw * s * .92;
+      g.fillStyle = '#6b4a2c'; g.fillRect(x - w / 2, y - 16 * s * 1.6, w, 16 * s * 1.6);
+      g.fillStyle = '#8a6137'; g.fillRect(x - w / 2, y - 16 * s * 1.6, w, 4 * s * 1.6);
+      flame(g, x, y - 12 * s * 1.6, w * 1.05, 80 * s * 1.6, RN.t, l);
+    }
   }
   if (RN.bonus && RN.phase === 'bonus') RN.bonus.coins.forEach(cn => {
-    const s = o.sc(cn.f), x = o.x(cn.l, cn.f), y = o.y(cn.f) - 16 * s, r = 15 * s * (.8 + .2 * Math.abs(Math.cos(RN.t * 6 + cn.l)));
-    g.fillStyle = '#f2b134'; g.beginPath(); g.ellipse(x, y, r, 15 * s, 0, 0, 7); g.fill(); g.strokeStyle = '#c98a14'; g.lineWidth = 2 * s; g.stroke();
-    g.fillStyle = '#ffe596'; g.beginPath(); g.ellipse(x - r * .25, y - 4 * s, r * .35, 6 * s, 0, 0, 7); g.fill();
+    const s = sc(cn.z), x = o.x(cn.l, cn.z), y = o.y(cn.z) - 22 * s * 1.5, rx = 17 * s * 1.5 * (.75 + .25 * Math.abs(Math.cos(RN.t * 5 + cn.l))), ry = 17 * s * 1.5;
+    g.fillStyle = '#f2b134'; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 7); g.fill(); g.strokeStyle = '#c98a14'; g.lineWidth = 2 * s * 1.5; g.stroke();
+    g.fillStyle = '#ffe596'; g.beginPath(); g.ellipse(x - rx * .25, y - ry * .25, rx * .35, ry * .4, 0, 0, 7); g.fill();
   });
-  RN.rx += (o.x(RN.lane, 1) - RN.rx) * .25;                    // دونده
-  const dead = RN.phase === 'dying' || RN.phase === 'dead', S0 = H * .16, x = RN.rx, y = yr, sw = dead ? 0 : Math.sin(RN.t * 13), run = RN.phase === 'run' || RN.phase === 'bonus';
-  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x, y + 2, S0 * .3, S0 * .08, 0, 0, 7); g.fill();
-  g.lineCap = 'round'; g.lineWidth = S0 * .12;
-  g.strokeStyle = '#34527f'; for (const d of [-1, 1]) { g.beginPath(); g.moveTo(x, y - S0 * .42); g.lineTo(x + d * sw * S0 * .22, y - S0 * .02 - (run && d * sw > 0 ? S0 * .08 : 0)); g.stroke(); }
-  g.fillStyle = dead ? '#8a4a3a' : '#2f9e6b'; g.beginPath(); g.roundRect ? g.roundRect(x - S0 * .17, y - S0 * .8, S0 * .34, S0 * .42, S0 * .1) : g.rect(x - S0 * .17, y - S0 * .8, S0 * .34, S0 * .42); g.fill();
-  g.strokeStyle = '#f1c27d'; g.lineWidth = S0 * .09; for (const d of [-1, 1]) { g.beginPath(); g.moveTo(x + d * S0 * .15, y - S0 * .72); g.lineTo(x + d * S0 * .27 - d * sw * S0 * .1, y - S0 * .5 + (run ? -d * sw * S0 * .1 : 0)); g.stroke(); }
-  g.fillStyle = '#f1c27d'; g.beginPath(); g.arc(x, y - S0 * .93, S0 * .16, 0, 7); g.fill();
-  g.fillStyle = '#2b2118'; g.beginPath(); g.arc(x, y - S0 * .98, S0 * .165, Math.PI, 0); g.fill();
-  if (RN.phase === 'dying' || RN.phase === 'dead') { flame(g, x, y, S0 * .7, S0 * 1.1, RN.t, 3); flame(g, x - 10, y - S0 * .3, S0 * .5, S0 * .8, RN.t + 1, 5); }
+  const tx = o.x(RN.lane, 0), old = RN.rx; RN.rx += (tx - RN.rx) * .22; const vx = RN.rx - old; RN.vx = RN.vx * .6 + vx * .4;
+  const dead = RN.phase === 'dying' || RN.phase === 'dead', run = RN.phase === 'run' || RN.phase === 'bonus' || RN.phase === 'idle';
+  rnRunner(g, RN.rx, yr, H * .24, { dead, run: run && !dead, lean: Math.max(-1, Math.min(1, RN.vx / 6)) });
 }
 
-/* ---- دروازه (HTML) ---- */
+/* ---- دروازه (کارت‌های بالای صحنه) ---- */
 function rnGate() {
-  const el = $('#rnGate'); if (!el) return; const q = RN.q;
-  if (!q || RN.phase === 'bonus' || RN.phase === 'idle' || RN.phase === 'win') { el.innerHTML = ''; return; }
-  el.innerHTML = q.o.cards.map((t, i) => `<div class="rn-card${q.over === 'burn' && i !== q.o.correct ? ' burn' : ''}${q.over === 'ok' && i === q.o.correct ? ' pass' : ''}"><span>${esc(t)}</span></div>`).join('');
-  rnPlaceGate();
-}
-function rnPlaceGate() {
-  const el = $('#rnGate'), q = RN.q; if (!el || !q || !RN.W) return; const o = geo(), p = q.p, s = o.sc(p);
-  [...el.children].forEach((d, i) => { d.style.width = (o.lw * .94) + 'px'; d.style.left = o.x(i, p) + 'px'; d.style.top = (o.y(p) - 8 * s) + 'px'; d.style.transform = `translate(-50%,-100%) scale(${s.toFixed(3)})`; });
+  const el = $('#rnGate'); if (!el) return; const q = RN.q; clearTimeout(RN.gt);
+  if (!q) { el.querySelectorAll('.rn-card').forEach(c => c.classList.add('pass')); RN.gt = setTimeout(() => { if (!RN.q) { el.innerHTML = ''; el.classList.remove('show'); } }, 600); return; }
+  q.shown = false; el.classList.remove('show');
+  el.innerHTML = q.o.cards.map((t, i) => `<div class="rn-card${q.over === 'burn' ? (i === q.o.correct ? ' good' : ' burn') : ''}"><span>${esc(t)}</span></div>`).join('');
+  if (q.over === 'burn') el.classList.add('show');
 }
 function rnPopup(t) { const m = $('#rnMsg'); if (!m) return; m.textContent = t; m.classList.remove('go'); void m.offsetWidth; m.classList.add('go'); }
 function rnHud() {
@@ -1374,6 +1482,7 @@ function rnHud() {
   a.textContent = 'امتیاز ' + fa(RN.score); b.textContent = '🪙 ' + fa(RN.coins);
   const e = RN.ev[Math.min(RN.ei, RN.ev.length - 1)]; c.textContent = e ? 'سورهٔ ' + byId[e.s].fa : '';
 }
+const rnTouch = () => window.matchMedia && matchMedia('(pointer:coarse)').matches;
 function rnOverlay() {
   const ov = $('#rnOv'); if (!ov) return; const ph = RN.phase, p = P();
   if (ph === 'run' || ph === 'bonus' || ph === 'dying') { ov.innerHTML = ''; ov.hidden = true; return; }
@@ -1382,6 +1491,7 @@ function rnOverlay() {
     const segs = runPlan(), na = segs.reduce((s, g) => s + g.n, 0);
     ov.innerHTML = `<div class="rn-panel"><div class="big-emoji">🏃</div><h1>دونده</h1>
       <p class="muted" style="margin:6px 0 10px">${fa(segs.length)} سوره، ${fa(na)} آیه در مسیر تو هست. اول «بسم‌الله» را انتخاب کن؛ هر بار آیهٔ درستِ بعدی راه را باز می‌کند و بقیه آتش‌اند!</p>
+      <p style="margin:0 0 10px;font-weight:700">${rnTouch() ? '👆 انگشتت را به چپ و راست بکش' : '⌨️ با کلیدهای ← و → حرکت کن'}</p>
       <div class="muted" style="font-weight:700;margin-bottom:6px">سرعت</div><div class="row" style="justify-content:center;margin-bottom:12px">${RN_PACE.map((x, i) => `<button class="btn ${rnPace() === x ? '' : 'ghost'} small" data-act="rnPace" data-i="${i}">${x.n}</button>`).join('')}</div>
       ${p.rb ? `<p class="muted">🏆 بهترین امتیاز: ${fa(p.rb)}</p>` : ''}
       <button class="btn gold" data-act="rnStart">شروع</button></div>`;
@@ -1395,7 +1505,7 @@ function rnOverlay() {
     <div class="stack"><button class="btn gold" data-act="rnAgain">دوباره 🔁</button><button class="btn ghost" data-act="go" data-to="games">بازی‌ها</button></div></div>`;
 }
 
-/* ---- حلقهٔ بازی و نمایش ---- */
+/* ---- حلقه و ورودی ---- */
 function rnFrame(now) {
   if (R().name !== 'run') { RN.loop = false; RN.phase = 'idle'; stopAudio(); return; }
   const cv = $('#rncv'); if (!cv) { RN.loop = false; return; }
@@ -1405,24 +1515,20 @@ function rnFrame(now) {
 }
 VIEW.run = () => `<div class="rn" id="rn">
   <div class="rn-top"><button class="x" data-act="rnQuit" aria-label="خروج">✕</button><b id="rnSc"></b><b id="rnCo"></b><span id="rnSu" class="muted"></span></div>
-  <div class="rn-stage" id="rnStage"><canvas id="rncv" aria-label="صحنهٔ بازی دونده"></canvas><div id="rnGate" aria-live="polite"></div><div id="rnMsg" class="rn-msg" aria-hidden="true"></div><div id="rnOv" class="rn-ov" hidden></div></div>
-  <div class="rn-ctl"><button class="btn water" data-act="rnL" aria-label="مسیر چپ">‹ چپ</button><button class="btn water" data-act="rnR" aria-label="مسیر راست">راست ›</button></div></div>`;
+  <div class="rn-stage" id="rnStage"><canvas id="rncv" aria-label="صحنهٔ بازی دونده"></canvas><div id="rnTime"><i></i></div><div id="rnGate" aria-live="polite"></div><div id="rnMsg" class="rn-msg" aria-hidden="true"></div><div id="rnOv" class="rn-ov" hidden></div></div></div>`;
 VIEW.run_after = () => {
   if (!runPlan().length) { go('games'); return; }
   RN.cv = $('#rncv'); rnSize();
-  if (RN.phase === 'run' || RN.phase === 'bonus' || RN.phase === 'dying') rnGate(); else if (RN.phase !== 'dead' && RN.phase !== 'win') RN.phase = 'idle';
+  if (RN.phase === 'run' || RN.phase === 'bonus' || RN.phase === 'dying') { RN.q && (RN.q.shown = false); rnGate(); } else if (RN.phase !== 'dead' && RN.phase !== 'win') RN.phase = 'idle';
   rnHud(); rnOverlay();
   if (!RN.loop) { RN.loop = true; RN.last = 0; requestAnimationFrame(rnFrame); }
-  const st = $('#rnStage'); let x0 = null;
-  st.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; x0 = e.clientX; });
-  st.addEventListener('pointerup', e => {
-    if (x0 == null) return; const dx = e.clientX - x0, r = st.getBoundingClientRect(); x0 = null;
-    if (Math.abs(dx) > 40) rnMove(dx > 0 ? 1 : -1); else rnLaneAt((e.clientX - r.left) / r.width);
-  });
+  const st = $('#rnStage'); let x0 = null;                       // کشیدن انگشت (یا ماوس) به چپ و راست
+  st.addEventListener('pointerdown', e => { if (!e.target.closest('button')) x0 = e.clientX; });
+  st.addEventListener('pointermove', e => { if (x0 == null) return; const dx = e.clientX - x0; if (Math.abs(dx) > 26) { rnMove(dx > 0 ? 1 : -1); x0 = e.clientX; } });
+  const up = () => { x0 = null; }; st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
 };
 const rnMove = d => { if (RN.phase === 'run' || RN.phase === 'bonus') RN.lane = Math.min(2, Math.max(0, RN.lane + d)); };
-const rnLaneAt = fx => { if (RN.phase === 'run' || RN.phase === 'bonus') RN.lane = fx < .36 ? 0 : fx > .64 ? 2 : 1; };
-window.addEventListener('keydown', e => { if (R().name !== 'run') return; if (e.key === 'ArrowLeft') rnMove(-1); if (e.key === 'ArrowRight') rnMove(1); });
+window.addEventListener('keydown', e => { if (R().name !== 'run') return; if (e.key === 'ArrowLeft') { rnMove(-1); e.preventDefault(); } if (e.key === 'ArrowRight') { rnMove(1); e.preventDefault(); } });
 window.addEventListener('resize', () => { if (R().name === 'run') rnSize(); });
 
 /* ============ حالت آزمایشی والدین ============
@@ -1695,7 +1801,6 @@ const A = {
   rnStart: () => rnStart(),
   rnAgain: () => rnStart(),
   rnQuit: () => { stopAudio(); RN.atok++; RN.phase = 'idle'; go('games'); },
-  rnL: () => rnMove(-1), rnR: () => rnMove(1),
   rnPace: el => { S.set.runPace = +el.dataset.i; save(); rnOverlay(); },
 
   /* باغ */
