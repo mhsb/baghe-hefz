@@ -3,7 +3,7 @@
 ساخت فایل صوتی هر سوره از فایل‌های آیه‌به‌آیه (برای کم‌کردن تعداد فایل‌ها)
 
 ورودی : پوشه‌ای که فایل‌های آیه‌به‌آیه در آن است، با نام‌هایی مثل 114001.mp3 (سه رقم سوره + سه رقم آیه)
-خروجی : audio/078.mp3 ... audio/114.mp3  و  audio/timings.json  (زمان شروع هر آیه)
+خروجی : audio/078.mp3 ... audio/114.mp3  و  audio/timings.json  (ستون ۰ هر سوره = بسم‌الله، ستون ۱ = شروع آیهٔ ۱، ...)
 
 اجرا  :  python3 tools/make-audio.py پوشهٔ_آیه‌ها            (خروجی در پوشهٔ audio کنار برنامه)
           python3 tools/make-audio.py پوشهٔ_آیه‌ها --bitrate 96k
@@ -28,43 +28,28 @@ def decode(path):
     return r.stdout
 
 
-def find_bism(src, out):
-    """بسم‌الله جدا (فایل 001001.mp3 = آیهٔ اول حمد). مدت آن را می‌دهد، یا None"""
-    for d in (src, out):
-        for p in (d / '001001.mp3', d / '1_001.mp3'):
-            if p.exists():
-                try:
-                    return len(decode(p)) / 2 / RATE
-                except RuntimeError:
-                    pass
-    return None
-
-
-def split_bism(pcm, bd):
-    """آیهٔ اولِ بیشتر سوره‌ها در فایل EveryAyah با «بسم‌الله» شروع می‌شود. مکث بعد از بسم‌الله را پیدا می‌کند و
-    (پایان بسم‌الله، شروع آیه) را به ثانیه برمی‌گرداند؛ اگر پیدا نشد None."""
+def split_bism(pcm):
+    """آیهٔ اولِ سوره‌ها در فایل EveryAyah با «بسم‌الله» شروع می‌شود. اولین مکثِ بلند بعد از بسم‌الله را پیدا می‌کند و
+    زمان شروع خود آیه را (ثانیه) برمی‌گرداند؛ اگر مکثی پیدا نشد None."""
     smp = array.array('h'); smp.frombytes(bytes(pcm[:len(pcm) // 2 * 2]))
-    fr = int(RATE * .02); n = len(smp) // fr
-    if n * .02 < bd + 1.0:
+    fr = int(RATE * .02); n = len(smp) // fr; total = n * .02
+    rms = [math.sqrt(sum(x * x for x in smp[i * fr:(i + 1) * fr]) / fr) for i in range(min(n, int(11 / .02)))]
+    if not rms:
         return None
-    rms = [math.sqrt(sum(x * x for x in smp[i * fr:(i + 1) * fr]) / fr) for i in range(int(min(n, (bd + 3) / .02)))]
     thr = max(120, .07 * max(rms))
-    runs, i = [], 0
+    i = 0
     while i < len(rms):
         if rms[i] < thr:
             j = i
             while j < len(rms) and rms[j] < thr:
                 j += 1
-            if (j - i) * .02 >= .16:
-                runs.append((i * .02, j * .02))
+            st, en = i * .02, j * .02
+            if en - st >= .25 and st >= 2.0 and total - en >= .8:
+                return round(max(st + .05, en - .1), 2)
             i = j
         else:
             i += 1
-    cand = [r for r in runs if max(1.0, bd - 1.6) <= r[0] <= bd + 1.6]
-    if not cand:
-        return None
-    r = min(cand, key=lambda r: abs(r[0] - bd))
-    return round(r[0] + .1, 2), round(max(r[0] + .1, r[1] - .1), 2)
+    return None
 
 
 def main():
@@ -73,6 +58,7 @@ def main():
     ap.add_argument('--out', default=str(pathlib.Path(__file__).resolve().parent.parent / 'audio'), help='پوشهٔ خروجی')
     ap.add_argument('--bitrate', default='64k', help='کیفیت mp3 (پیش‌فرض 64k، تک‌کاناله)')
     ap.add_argument('--no-bism', action='store_true', help='بسم‌الله را از آیهٔ اول جدا نکن')
+    ap.add_argument('--bism', default='', help='تنظیم دستی شروع آیهٔ ۱ بعضی سوره‌ها، مثل 114=4.2,113=4.6')
     ap.add_argument('--gap', type=float, default=0.0, help='مکث اضافه بین آیه‌ها به ثانیه (پیش‌فرض ۰)')
     a = ap.parse_args()
     if not shutil.which('ffmpeg'):
@@ -90,10 +76,10 @@ def main():
 
     tfile = out / 'timings.json'
     timings = json.loads(tfile.read_text()) if tfile.exists() else {}
+    if timings.get('v') != 2:        # قالب قدیمی (بدون ستون بسم‌الله) با قالب تازه قاطی نشود
+        timings = {'v': 2}
+    manual = {int(k): float(v) for k, v in (x.split('=') for x in a.bism.split(',') if '=' in x)}
     done, bad = [], []
-    bd = None if a.no_bism else find_bism(src, out)
-    bism = timings.get('b', {}) if isinstance(timings.get('b'), dict) else {}
-    print('مدت بسم‌الله جدا:', f'{bd:.1f} ثانیه' if bd else 'پیدا نشد (جداسازی بسم‌الله انجام نمی‌شود)')
     for s, n in AYAHS.items():
         have = found.get(s, {})
         missing = [v for v in range(1, n + 1) if v not in have]
@@ -104,16 +90,15 @@ def main():
         pcm, starts, pos = bytearray(), [], 0.0
         gap = b'\0\0' * int(RATE * a.gap)
         for v in range(1, n + 1):
-            starts.append(round(pos, 3))
+            if v > 1:
+                starts.append(round(pos, 3))
             d = decode(have[v]) + gap
-            if v == 1 and bd:
-                sp = split_bism(d, bd)
-                if sp:
-                    bism[str(s)] = [0, sp[0]]; starts[-1] = sp[1]
-                    print(f'  سورهٔ {s}: بسم‌الله 0 تا {sp[0]} ثانیه، آیهٔ ۱ از {sp[1]}')
+            if v == 1:       # ستون ۰ = بسم‌الله (از ۰ تا شروع آیهٔ ۱)، ستون ۱ = شروع آیهٔ ۱ و ...
+                at = manual.get(s) if s in manual else (None if a.no_bism else split_bism(d))
+                if at:
+                    starts = [0, at]; print(f'  سورهٔ {s}: بسم‌الله 0 تا {at} ثانیه، آیهٔ ۱ از {at}')
                 else:
-                    bism.pop(str(s), None)
-                    print(f'  سورهٔ {s}: بسم‌الله در فایل آیهٔ اول پیدا نشد (فقط آیه است؟)')
+                    starts = [0, 0]; print(f'  سورهٔ {s}: بسم‌الله جدا نشد (فایل فقط آیه است؟ یا با --bism تنظیم کنید)')
             pcm += d; pos += len(d) / 2 / RATE
         enc = subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 's16le', '-ar', str(RATE), '-ac', '1', '-i', '-',
                               '-c:a', 'libmp3lame', '-b:a', a.bitrate, str(out / f'{s:03d}.mp3')], input=bytes(pcm))
@@ -122,8 +107,7 @@ def main():
         timings[str(s)] = starts
         done.append(s)
         print(f'سورهٔ {s}: {n} آیه، {pos:.1f} ثانیه')
-    if bism:
-        timings['b'] = bism
+    timings['v'] = 2
     tfile.write_text(json.dumps(timings), encoding='utf8')
     (out / 'timings.js').write_text('window.HIFZ_TIMINGS=' + json.dumps(timings) + ';', encoding='utf8')   # برای باز کردن مستقیم index.html بدون سرور (file://)
     print(f'\nساخته شد: {len(done)} سوره  ->  {out}')

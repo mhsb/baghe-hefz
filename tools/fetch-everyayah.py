@@ -58,10 +58,6 @@ def main():
         jobs = [(a.img_url.format(base=a.base, s=s, v=v), dest / f'{s}_{v}.png') for s, n in AYAHS.items() for v in range(1, n + 1)]
     else:
         jobs = [(f'{a.base}/{a.reciter}/{s:03d}{v:03d}.mp3', dest / f'{s:03d}{v:03d}.mp3') for s, n in AYAHS.items() for v in range(1, n + 1)]
-    if not a.images:   # «بسم‌الله» (آیهٔ ۱ سورهٔ حمد) برای بازی دونده؛ در audio/001001.mp3، ناموفق‌بودنش مهم نیست
-        bd = ROOT / 'audio'; bd.mkdir(exist_ok=True)
-        r = get(f'{a.base}/{a.reciter}/001001.mp3', bd / '001001.mp3')
-        print('بسم‌الله:', 'آماده' if not r.startswith('fail') else 'دانلود نشد (بازی دونده بدون صدای بسم‌الله کار می‌کند)')
     total, failed, done = len(jobs), [], 0
     with ThreadPoolExecutor(a.threads) as ex:
         for (url, path), res in zip(jobs, ex.map(lambda j: get(*j), jobs)):

@@ -432,38 +432,40 @@ function playUrl(url, start, stop, tok) {
     if (start) AU.onloadedmetadata = go; else go();
   });
 }
-/* پخش یک آیه: اول فایل آیه به آیه، بعد فایل کل سوره با جدول زمان‌ها.
-   آیهٔ اولِ سوره‌ها در فایل اصلی با «بسم‌الله» شروع می‌شود؛ زمان بسم‌الله در timings.b جداست و آیه از بعد از آن پخش می‌شود. */
+/* جدول زمان‌ها (timings.json، نسخهٔ ۲): برای هر سوره n+۱ عدد. عدد ۰ شروع بسم‌الله، عدد ۱ شروع آیهٔ ۱ (= پایان بسم‌الله)، عدد a شروع آیهٔ a.
+   قالب قدیمی (بدون «v») فقط شروع آیه‌هاست و بسم‌الله ندارد. */
+const tSpan = (s, a) => {                              // [شروع, پایان] آیه در فایل سوره
+  const t = timings && timings[s]; if (!t) return null;
+  if (timings.v === 2) return t[a] != null ? [t[a], t[a + 1] != null ? t[a + 1] : null] : null;
+  return t[a - 1] != null ? [t[a - 1], t[a] != null ? t[a] : null] : null;
+};
+const bismSpan = s => { const t = timings && timings.v === 2 && timings[s]; return t && t[1] > t[0] + .3 ? [t[0], t[1]] : null; };
 async function playAyah(s, a) {
   const tok = ++playTok; AU.pause();
   await loadTimings(); if (tok !== playTok) return 'cancel';
-  const bs = a === 1 && timings && timings.b && timings.b[s] ? timings.b[s][1] : 0;
-  if (audioMode[s] !== 'surah' && audioMode[s] !== 'none') {
-    const r = await playUrl(ayUrl(s, a), bs, null, tok);
+  const sp = tSpan(s, a);
+  if (audioMode[s] !== 'surah' && audioMode[s] !== 'none') {       // فایل آیه‌به‌آیه: آیهٔ ۱ با بسم‌الله شروع می‌شود، از شروع خود آیه پخش می‌کنیم
+    const r = await playUrl(ayUrl(s, a), a === 1 && sp && timings.v === 2 ? sp[0] : 0, null, tok);
     if (r === 'ended') { audioMode[s] = 'ayah'; return 'ended'; }
     if (r === 'cancel' || r === 'blocked') return r;
     if (audioMode[s] === 'ayah') return 'fail';
   }
-  const t = timings && timings[s];
-  if (t && t[a - 1] != null && audioMode[s] !== 'none') {
-    const r = await playUrl(suUrl(s), t[a - 1], t[a] != null ? t[a] : null, tok);
+  if (sp && audioMode[s] !== 'none') {
+    const r = await playUrl(suUrl(s), sp[0], sp[1], tok);
     if (r === 'ended') { audioMode[s] = 'surah'; return 'ended'; }
     if (r !== 'fail') return r;
   }
   audioMode[s] = 'none'; return 'fail';
 }
-/* بسم‌الله‌ی اول همان سوره (اگر جدا نشده باشد، بسم‌الله‌ی عمومی audio/001001.mp3) */
+/* بسم‌الله‌ی اول همان سوره (از خود فایل همان سوره). اگر در جدول زمان‌ها نباشد 'fail' برمی‌گرداند و چیزی پخش نمی‌شود */
 async function playBism(s) {
   const tok = ++playTok; AU.pause();
   await loadTimings(); if (tok !== playTok) return 'cancel';
-  const b = timings && timings.b && timings.b[s];
-  if (b) {
-    let r = 'fail';
-    if (audioMode[s] !== 'ayah') r = await playUrl(suUrl(s), b[0], b[1], tok);
-    if (r === 'fail' && audioMode[s] !== 'surah') r = await playUrl(ayUrl(s, 1), 0, b[1], tok);
-    if (r !== 'fail') return r;
-  }
-  return playUrl(ayUrl(1, 1), 0, null, tok);
+  const b = bismSpan(s); if (!b) return 'fail';
+  let r = 'fail';
+  if (audioMode[s] !== 'ayah') r = await playUrl(suUrl(s), b[0], b[1], tok);
+  if (r === 'fail' && audioMode[s] !== 'surah') r = await playUrl(ayUrl(s, 1), 0, b[1], tok);
+  return r;
 }
 async function playSurahFile(s) { const tok = ++playTok; AU.pause(); return playUrl(suUrl(s), 0, null, tok); }
 /* آیا فایل صوتی وجود دارد؟ (با خود المان صوت، تا روی file:// هم کار کند) */
@@ -1275,15 +1277,17 @@ const rnProbe = url => new Promise(res => {
   a.onloadedmetadata = () => f(isFinite(a.duration) ? a.duration : null); a.onerror = () => f(null); setTimeout(() => f(null), 1500); a.src = url;
 });
 async function rnAnsDur(ev) {
-  const s = ev.s, a = ev.a, est = a ? Math.max(1.5, words(s, a).length * .85 + .5) : 4;
+  const s = ev.s, a = ev.a, est = a ? Math.max(1.5, words(s, a).length * .85 + .5) : .4;
   try {
-    await loadTimings(); const t = timings && timings[s], b = timings && timings.b && timings.b[s];
-    if (!a) { if (b) return b[1] - b[0]; return (await rnProbe(ayUrl(1, 1))) || est; }
-    if (t && t[a - 1] != null) {
-      if (t[a] != null) return t[a] - t[a - 1];
-      const d = await rnProbe(suUrl(s)); if (d) return d - t[a - 1];
+    await loadTimings();
+    const bs = bismSpan(s);
+    if (!a) return bs ? bs[1] - bs[0] : 0.4;
+    const sp = tSpan(s, a);
+    if (sp) {
+      if (sp[1] != null) return sp[1] - sp[0];
+      const d = await rnProbe(suUrl(s)); if (d) return d - sp[0];
     }
-    const d = await rnProbe(ayUrl(s, a)); if (d) return d - (a === 1 && b ? b[1] : 0);
+    const d = await rnProbe(ayUrl(s, a)); if (d) return d - (a === 1 && timings && timings.v === 2 && sp ? sp[0] : 0);
   } catch (e) { }
   return est;
 }
@@ -1591,9 +1595,9 @@ const head = async u => { try { const r = await fetch(u, { method: 'HEAD', cache
 async function findAudio() {                       // فایل‌های صوتی‌ای که روی همین سایت هست
   try {
     const r = await fetch('audio/timings.json', { cache: 'no-store' });
-    if (r.ok) { const t = await r.json(), urls = ['audio/timings.json']; for (const s of Object.keys(t)) if (byId[s]) urls.push(suUrl(+s)); if (await head(ayUrl(1, 1))) urls.push(ayUrl(1, 1)); return urls; }
+    if (r.ok) { const t = await r.json(), urls = ['audio/timings.json']; for (const s of Object.keys(t)) if (byId[s]) urls.push(suUrl(+s)); return urls; }
   } catch (e) { }
-  const jobs = [], urls = []; SUR.forEach(s => { for (let a = 1; a <= s.v.length; a++) jobs.push(ayUrl(s.id, a)); }); jobs.push(ayUrl(1, 1));
+  const jobs = [], urls = []; SUR.forEach(s => { for (let a = 1; a <= s.v.length; a++) jobs.push(ayUrl(s.id, a)); });
   await runPool(jobs, 12, async u => { if (await head(u)) urls.push(u); });
   return urls;
 }
