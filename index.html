@@ -1236,7 +1236,7 @@ const runCard = () => { const ok = runPlan().length > 0; return `<button class="
    سرعت دویدن همیشه ثابت است. فاصلهٔ دروازه‌ها طوری تنظیم می‌شود که صدای آیهٔ جواب‌داده‌شده در راه پخش شود.
    ترتیب: بسم‌الله‌ی سوره ← آیه‌های ناس ← (مرحلهٔ سکه) ← بسم‌الله‌ی فلق ... تا جایی که کودک پشت‌سرهم حفظ کرده. */
 const BISM = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ';
-const RN_PACE = [{ n: 'آرام', sight: 7 }, { n: 'متوسط', sight: 5.2 }, { n: 'تند', sight: 3.8 }];   // مدت دیدن و جواب‌دادن (ثانیه)
+const RN_SPEED = 3.8;                                       // فقط یک سرعت (تند): مدت طی‌کردن RN_D متر
 const RN_D = 24, RN_Z0 = 5;                                 // دید (متر) و ضریب پرسپکتیو
 const RN = { phase: 'idle', loop: false, cv: null, W: 0, H: 0, lane: 1, rx: 0, t: 0, dist: 0, ev: [], ei: 0, q: null, score: 0, coins: 0, ayahs: 0, sdone: 0, atok: 0, bonus: null, dt: 0, last: 0, newBest: false, stars: 0, pend: null, shown: 0, vx: 0 };
 
@@ -1252,8 +1252,7 @@ function runEvents() {
   const ev = []; runPlan().forEach((g, si) => { for (let a = 0; a <= g.n; a++) ev.push({ k: 'q', s: g.s, a, si }); if (g.full) ev.push({ k: 'bonus', s: g.s, si }); });
   return ev;
 }
-const rnPace = () => RN_PACE[Math.min(2, Math.max(0, S.set.runPace == null ? 1 : S.set.runPace))];
-const rnV = () => RN_D / rnPace().sight;
+const rnV = () => RN_D / RN_SPEED;
 const rnAyText = ev => ev.a ? byId[ev.s].v[ev.a - 1][0] : BISM;
 
 function rnOpts(ev) {
@@ -1296,12 +1295,12 @@ async function rnAnsDur(ev) {
 function rnStart() {
   RN.ev = runEvents(); if (!RN.ev.length) return;
   Object.assign(RN, { ei: 0, score: 0, coins: 0, ayahs: 0, sdone: 0, lane: 1, bonus: null, newBest: false, stars: 0, q: null, pend: null, dt: 0, shown: 0 });
-  stopAudio(); RN.atok++; RN.phase = 'run'; rnGate(); rnWait(RN.ev[0], .9);
+  stopAudio(); RN.atok++; RN.phase = 'run'; rnGate(); rnWait(RN.ev[0], 6);
   rnHud(); rnOverlay();
 }
-function rnSpawn(ev, dur, waited) {
-  const v = rnV(), o = rnOpts(ev);
-  RN.q = { e: ev, o, z: RN_D + v * Math.max(.2, dur + .3 - waited), over: null }; RN.pend = null; rnGate(); rnHud();
+function rnSpawn(ev, dur, waited) {                     // دروازه درست وقتی به دونده می‌رسد که صدای آیهٔ قبلی تمام شود؛ وسط صدا گزینه‌ها پیدا می‌شوند
+  const v = rnV(), o = rnOpts(ev), T = Math.max(4, dur);
+  RN.q = { e: ev, o, z: v * Math.max(.6, T - waited), zv: v * T / 2, over: null }; RN.pend = null; rnGate(); rnHud();
 }
 function rnWait(ev, dur) {                              // دروازهٔ بعدی وقتی ظاهر می‌شود که صدای آیهٔ قبلی تمام شده باشد
   const me = RN.pend = { t: RN.t, ev };
@@ -1341,7 +1340,7 @@ function rnUpdate(dt) {
   RN.vx = RN.vx * .85;
   if (ph === 'run' && RN.q) {
     const q = RN.q; q.z -= v * dt; if (q.z <= 0) rnResolve();
-    const el = $('#rnGate'); if (el && RN.q === q) { const show = q.z <= RN_D; if (show !== !!q.shown) { q.shown = show; el.classList.toggle('show', show); } const tb = $('#rnTime i'); if (tb) tb.style.width = Math.max(0, Math.min(100, q.z / RN_D * 100)) + '%'; }
+    const el = $('#rnGate'); if (el && RN.q === q) { const show = q.z <= q.zv; if (show !== !!q.shown) { q.shown = show; el.classList.toggle('show', show); } const tb = $('#rnTime i'); if (tb) tb.style.width = show ? Math.max(0, Math.min(100, q.z / q.zv * 100)) + '%' : '100%'; }
   } else if (ph === 'bonus') {
     const b = RN.bonus; b.t += dt; b.spawn -= dt;
     if (b.t < 9 && b.spawn <= 0) {
@@ -1352,7 +1351,7 @@ function rnUpdate(dt) {
     b.coins = b.coins.filter(c => { if (c.z > 0) return true; if (c.l === RN.lane) { RN.coins++; RN.score += 5; b.got++; chime(); rnHud(); } return false; });
     if (b.t >= 9 && !b.coins.length) {
       RN.ei++; RN.bonus = null; RN.phase = 'run';
-      if (!RN.ev[RN.ei]) rnFinish(true); else rnWait(RN.ev[RN.ei], .8);
+      if (!RN.ev[RN.ei]) rnFinish(true); else rnWait(RN.ev[RN.ei], 4);
     }
   } else if (ph === 'dying') { RN.dt += dt; if (RN.dt > 1.5) rnFinish(false); }
   else if (ph === 'dead' || ph === 'win') { RN.dt += dt; if (RN.dt > .4 && !RN.shown) { RN.shown = 1; rnOverlay(); } }
@@ -1452,7 +1451,7 @@ function rnDraw() {
     }
   }
   const q = RN.q;
-  if (q && RN.phase !== 'bonus' && q.z < RN_D * 1.6) {            // دیوار آتش در هر سه مسیر (جواب لو نمی‌رود)
+  if (q && RN.phase !== 'bonus' && q.z <= q.zv && q.z < 120) {            // دیوار آتش در هر سه مسیر (جواب لو نمی‌رود)
     const s = sc(q.z), y = o.y(q.z);
     for (let l = 0; l < 3; l++) {
       if (q.over === 'ok' && l === q.o.correct) continue;
@@ -1496,7 +1495,6 @@ function rnOverlay() {
     ov.innerHTML = `<div class="rn-panel"><div class="big-emoji">🏃</div><h1>دونده</h1>
       <p class="muted" style="margin:6px 0 10px">${fa(segs.length)} سوره، ${fa(na)} آیه در مسیر تو هست. اول «بسم‌الله» را انتخاب کن؛ هر بار آیهٔ درستِ بعدی راه را باز می‌کند و بقیه آتش‌اند!</p>
       <p style="margin:0 0 10px;font-weight:700">${rnTouch() ? '👆 انگشتت را به چپ و راست بکش' : '⌨️ با کلیدهای ← و → حرکت کن'}</p>
-      <div class="muted" style="font-weight:700;margin-bottom:6px">سرعت</div><div class="row" style="justify-content:center;margin-bottom:12px">${RN_PACE.map((x, i) => `<button class="btn ${rnPace() === x ? '' : 'ghost'} small" data-act="rnPace" data-i="${i}">${x.n}</button>`).join('')}</div>
       ${p.rb ? `<p class="muted">🏆 بهترین امتیاز: ${fa(p.rb)}</p>` : ''}
       <button class="btn gold" data-act="rnStart">شروع</button></div>`;
     return;
@@ -1528,7 +1526,7 @@ VIEW.run_after = () => {
   if (!RN.loop) { RN.loop = true; RN.last = 0; requestAnimationFrame(rnFrame); }
   const st = $('#rnStage'); let x0 = null;                       // کشیدن انگشت (یا ماوس) به چپ و راست
   st.addEventListener('pointerdown', e => { if (!e.target.closest('button')) x0 = e.clientX; });
-  st.addEventListener('pointermove', e => { if (x0 == null) return; const dx = e.clientX - x0; if (Math.abs(dx) > 26) { rnMove(dx > 0 ? 1 : -1); x0 = e.clientX; } });
+  st.addEventListener('pointermove', e => { if (x0 == null) return; const dx = e.clientX - x0; if (Math.abs(dx) > 30) { rnMove(dx > 0 ? 1 : -1); x0 = null; } });   // هر کشیدن فقط یک مسیر
   const up = () => { x0 = null; }; st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
 };
 const rnMove = d => { if (RN.phase === 'run' || RN.phase === 'bonus') RN.lane = Math.min(2, Math.max(0, RN.lane + d)); };
@@ -1805,7 +1803,6 @@ const A = {
   rnStart: () => rnStart(),
   rnAgain: () => rnStart(),
   rnQuit: () => { stopAudio(); RN.atok++; RN.phase = 'idle'; go('games'); },
-  rnPace: el => { S.set.runPace = +el.dataset.i; save(); rnOverlay(); },
 
   /* باغ */
   listenSurah: async el => {
